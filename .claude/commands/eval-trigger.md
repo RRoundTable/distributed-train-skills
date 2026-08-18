@@ -312,3 +312,22 @@ rm -rf /tmp/trigger-eval-headtohead
 
 A failure on the ops negatives is a description bug, not a flake. Fix the
 `Do NOT activate for:` clause, do not re-roll the eval.
+
+## Known noise: sibling negatives in the isolated stub
+
+Part 1 shows the target skill **alone**, so a *sibling* negative ("how much HBM
+does a 13B model need?" against `communication-backends`) asks the model to
+decline the only distributed-training tool it can see. Measured over 5 repeats,
+those queries swing between 2/5 and 5/5 correct and do **not** respond
+monotonically to description wording — three different phrasings of the same
+disclaimer produced 1/5, 2/5 and 5/5 with no consistent ordering.
+
+Consequences for how to read a run:
+
+- A single-shot 100% on sibling negatives is partly luck. Do not tune wording
+  against one sample; repeat the specific query 5x before concluding anything.
+- **Positives and forge-train ops negatives are stable** — those held at 5/5
+  across every variant tested, so a failure there is real signal.
+- For sibling boundaries, trust **Part 2 (head-to-head)** instead. With all
+  skills present the model compares descriptions rather than guessing, and
+  routing was 5/5 correct on exactly the queries that were noisy in isolation.

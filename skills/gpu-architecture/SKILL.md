@@ -1,24 +1,20 @@
 ---
 name: gpu-architecture
 description: |
-  What happens inside a single GPU and what its hardware can and cannot do.
-  Activate for: roofline analysis, arithmetic intensity, ridge point, "memory-bound
-  vs compute-bound", peak FLOPs of A100 / H100 / B200 and what MFU is achievable
-  on them, "H100에서 7B 모델 MFU 얼마 나와야 정상이야", SM / warp / occupancy,
-  HBM vs L2 vs shared memory bandwidth, tensor cores and their tile shapes,
-  bf16 vs fp16 vs fp8 vs tf32 numerics and why fp32 master weights exist, loss
-  scaling, kernel fusion, why FlashAttention is faster and how online softmax
-  works, torch.compile / Triton codegen, tile quantization and padding vocab
-  sizes, and profiling with Nsight Systems / Nsight Compute or the PyTorch
-  profiler.
-  Do NOT activate for: how the model is split across GPUs (use
-  distributed-train:parallelism-strategies); collectives, NCCL or interconnect
-  (use distributed-train:communication-backends); HBM capacity budgeting, OOM
-  or offload (use distributed-train:memory-offloading); end-to-end MFU
-  measurement and throughput/loss reporting (use distributed-train:training-metrics).
-  Also do NOT activate for real cluster operations — submitting jobs, GPU quota,
-  which GPUs are free, job logs, images, or nvidia-smi output from a running
-  job. That is mlops:forge-train.
+  What happens inside a single GPU and what its hardware can do. Activate for:
+  roofline, arithmetic intensity and ridge point, memory-bound vs compute-bound,
+  peak FLOPs of A100 / H100 / B200 and achievable MFU on them, SM / occupancy,
+  HBM vs L2 vs shared memory, tensor cores and tile quantization, bf16 / fp16 /
+  fp8 / tf32 numerics, fp32 master weights, loss scaling, kernel fusion, why
+  FlashAttention is faster, online softmax, torch.compile / Triton, Nsight
+  profiling, "H100에서 7B 모델 MFU 얼마 나와야 정상이야".
+  Do NOT activate for how the model is split across GPUs
+  (parallelism-strategies), collectives or interconnect
+  (communication-backends), HBM capacity budgeting/OOM/offload
+  (memory-offloading), or end-to-end MFU measurement and loss curves
+  (training-metrics). Do NOT activate for real cluster operations — submit,
+  quota, which GPUs are free, job logs, nvidia-smi from a running job:
+  mlops:forge-train.
 ---
 
 # GPU Architecture

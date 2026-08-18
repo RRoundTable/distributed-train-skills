@@ -1,25 +1,17 @@
 ---
 name: parallelism-strategies
 description: |
-  How a model and its state are split across accelerators, and what each split
-  costs. Activate for: DDP vs FSDP vs DeepSpeed ZeRO, which ZeRO stage to use,
-  tensor parallelism / Megatron column-row splitting, pipeline parallelism and
-  the bubble, GPipe / 1F1B / interleaved / zero-bubble schedules, sequence vs
-  context parallelism, ring attention, expert parallelism and MoE routing,
-  choosing TP/PP/DP/CP degrees, 3D or 4D parallelism mesh design, "TP=8 or
-  TP=4 PP=2", "왜 pipeline parallelism에 bubble이 생겨", "DDP랑 FSDP 차이",
-  "70B 모델 어떻게 쪼개", parallelism ordering across nodes, and comm-volume
-  comparisons between sharding strategies.
-  Do NOT activate for: the collective algorithms and interconnect underneath
-  (ring vs tree all-reduce, NCCL mechanics, bucketing, hangs, stragglers — use
-  distributed-train:communication-backends); how much HBM a config needs, OOM
-  triage, activation checkpointing or offload (use
-  distributed-train:memory-offloading); MFU, throughput or loss curves (use
-  distributed-train:training-metrics); single-GPU kernels, roofline or
-  precision (use distributed-train:gpu-architecture).
-  Also do NOT activate for running or inspecting real cluster jobs — submitting
-  a training job, GPU quota, job status, reading a failed job's logs, multi-node
-  launch, images or disks — that is mlops:forge-train.
+  How a model and its state are split across GPUs, and what each split costs.
+  Activate for: DDP vs FSDP vs DeepSpeed ZeRO and which stage, tensor / pipeline
+  / context / expert parallelism, Megatron column-row split, pipeline bubble and
+  1F1B / interleaved / zero-bubble schedules, sequence vs context parallelism,
+  ring attention, MoE routing, choosing TP/PP/DP/CP degrees, 3D/4D mesh design,
+  comm-volume comparisons, "70B 모델 어떻게 쪼개", "DDP랑 FSDP 차이".
+  Do NOT activate for collectives/NCCL/hangs (communication-backends), OOM or
+  memory budgeting (memory-offloading), MFU/throughput/loss (training-metrics),
+  or single-GPU kernels/roofline/precision (gpu-architecture). Do NOT activate
+  for real cluster jobs (submit, quota, job logs, multi-node launch):
+  mlops:forge-train.
 ---
 
 # Parallelism Strategies

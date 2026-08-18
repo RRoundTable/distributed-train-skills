@@ -1,23 +1,19 @@
 ---
 name: memory-offloading
 description: |
-  What occupies GPU memory, why it runs out, and what to do about it.
-  Activate for: CUDA out of memory triage and the order to try fixes,
-  "A100 80GB에 13B bf16 + Adam 학습 가능해?", will this model fit, memory
-  budgeting and the model-state vs activation split, activation memory formulas,
-  gradient/activation checkpointing and selective recomputation, "gradient
-  checkpointing 켜면 얼마나 느려져", CPU and NVMe offload, ZeRO-Offload and
-  ZeRO-Infinity, optimizer state size, 8-bit optimizers, fp32 master weights as
-  a memory line item, allocator fragmentation, "reserved but unallocated",
-  expandable_segments, memory snapshots, and OOM that appears only after N steps.
-  Do NOT activate for: choosing parallelism degrees or ZeRO stage as a sharding
-  decision (use distributed-train:parallelism-strategies); collectives, NCCL,
-  bandwidth or hangs (use distributed-train:communication-backends); roofline,
-  kernel speed or precision numerics (use distributed-train:gpu-architecture);
-  MFU, throughput or loss curves (use distributed-train:training-metrics).
-  Also do NOT activate for real cluster operations — an OOM in a running or
-  failed job's logs, exit 137 / host OOM kills, job submission, GPU quota,
-  picking a GPU type for a job, or disks and datasets. That is mlops:forge-train.
+  What occupies GPU memory, why it runs out, and what to do about it. Activate
+  for: CUDA out-of-memory triage and the order to try fixes, will this model fit
+  / memory budgeting, model-state vs activation split, activation-memory
+  formulas, gradient or activation checkpointing and selective recomputation,
+  CPU and NVMe offload, ZeRO-Offload / ZeRO-Infinity, optimizer-state size,
+  8-bit optimizers, fp32 master weights as a memory line item, allocator
+  fragmentation and expandable_segments, "A100 80GB에 13B bf16 + Adam 학습 가능해".
+  Do NOT activate for choosing parallelism degrees or ZeRO stage as a sharding
+  decision (parallelism-strategies), collectives/NCCL/bandwidth
+  (communication-backends), roofline or precision numerics (gpu-architecture),
+  or MFU/throughput/loss curves (training-metrics). Do NOT activate for real
+  cluster operations — an OOM in a job's logs, exit 137 / host OOM kills,
+  submit, quota, picking a GPU type, disks: mlops:forge-train.
 ---
 
 # Memory and Offloading

@@ -1,25 +1,21 @@
 ---
 name: communication-backends
 description: |
-  Everything that happens on the wire between GPUs and between nodes.
-  Activate for: how ring vs tree all-reduce works, "NCCL all-reduce가 ring이랑
-  tree랑 뭐가 달라", collective algorithms and their cost models, all-gather /
-  reduce-scatter / all-to-all mechanics, busbw vs algbw, nccl-tests
-  interpretation, the alpha-beta model, gradient bucketing and bucket size
-  choice, overlapping communication with compute, why scaling breaks at the
-  node boundary, NVLink / PCIe / InfiniBand topology and rail alignment,
-  collective timeouts and hangs as a concept ("a collective is a barrier"),
-  straggler detection, flight recorder / trace buffers, checkpoint interval
-  math, and gradient compression or quantized collectives.
-  Do NOT activate for: choosing parallelism degrees or ZeRO stage (use
-  distributed-train:parallelism-strategies); HBM capacity, OOM or offload (use
-  distributed-train:memory-offloading); single-GPU kernels, roofline or
-  precision (use distributed-train:gpu-architecture); MFU and throughput
-  numbers (use distributed-train:training-metrics).
-  Also do NOT activate for real cluster operations — reading a running or
-  failed job's NCCL logs, setting NCCL_IB_HCA / NCCL_SOCKET_IFNAME for a
-  specific cluster, job submission, quota, multi-node launch, or exit codes.
-  That is mlops:forge-train.
+  Everything on the wire between GPUs and between nodes. Activate for: ring vs
+  tree all-reduce, collective algorithms and the α-β cost model, all-gather /
+  reduce-scatter / all-to-all, busbw vs algbw and nccl-tests, gradient bucketing,
+  overlapping comm with compute, NVLink / PCIe / InfiniBand topology and rail
+  alignment, why a collective timeout or hang happens ("Watchdog caught
+  collective operation timeout", NCCL timeout), straggler detection,
+  flight recorder, checkpoint-interval math, gradient compression,
+  "NCCL all-reduce가 ring이랑 tree랑 뭐가 달라".
+  Do NOT activate for how much memory a model needs, OOM or offload
+  (memory-offloading), parallelism degrees or ZeRO stage
+  (parallelism-strategies), single-GPU kernels or roofline (gpu-architecture),
+  or MFU/throughput numbers (training-metrics). Do NOT
+  activate for real cluster operations — a job's NCCL logs, NCCL_IB_HCA /
+  NCCL_SOCKET_IFNAME values for a specific cluster, submit, quota, multi-node
+  launch: mlops:forge-train.
 ---
 
 # Communication Backends

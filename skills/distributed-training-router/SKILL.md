@@ -1,26 +1,14 @@
 ---
 name: distributed-training-router
 description: |
-  Entry point for distributed / large-scale model training questions that are
-  vague, span several topics, or are a "where do I even start" ask. Activate for:
-  "분산학습 뭐부터 봐야 해", "how do I train a 70B model", "what's the difference
-  between DDP and FSDP and Megatron", "our training is slow, no idea why",
-  "explain the whole distributed training stack", "which parallelism should I
-  use", 처음 접하는 사람을 위한 개념 정리, or any question mixing memory +
-  communication + throughput at once. Routes to the right sibling skill and
-  supplies the shared notation, the four-budget diagnostic frame, and a
-  symptom index.
-  Do NOT activate for: questions already scoped to one surface — sharding and
-  parallelism degrees (use distributed-train:parallelism-strategies), NCCL /
-  collectives / interconnect (use distributed-train:communication-backends),
-  SM/HBM/roofline/precision inside one GPU (use distributed-train:gpu-architecture),
-  MFU / throughput / loss curves (use distributed-train:training-metrics),
-  OOM, memory budgeting, "will this model fit on this GPU", activation
-  checkpointing or offload (use distributed-train:memory-offloading).
-  Also do NOT activate for running or inspecting real cluster jobs — submitting
-  a training job, GPU quota, job status/QUEUED, reading a failed job's logs,
-  building training images, datasets/disks, multi-node launch — that is
-  mlops:forge-train.
+  Vague, multi-topic, or "where do I start" distributed-training questions —
+  "분산학습 뭐부터 봐야 해", "how do I train a 70B model", "학습이 느린데 이유를 모르겠어",
+  "explain the whole distributed training stack". Supplies the shared notation
+  (n = d·t·p·c, B = b·m·d) and the four-budget frame, then routes onward.
+  Do NOT activate if the question is already scoped to parallelism, collectives,
+  GPU internals, metrics, or memory — use the matching distributed-train sibling.
+  Do NOT activate for real cluster jobs (submit, quota, job status/QUEUED, job
+  logs, images, multi-node launch): mlops:forge-train.
 ---
 
 # Distributed Training Router

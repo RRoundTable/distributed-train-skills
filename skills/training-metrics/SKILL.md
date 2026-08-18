@@ -2,22 +2,17 @@
 name: training-metrics
 description: |
   The numbers you measure from a training run and what they mean. Activate for:
-  MFU and HFU — how to compute them, what is achievable, why they are inflated
-  or deflated; FLOP counting and the 6N-per-token rule; tokens/s and
-  samples/s; scaling efficiency, "GPU 8장 썼는데 5.2배밖에 안 빨라졌어",
-  strong vs weak scaling; step-time modelling and predicting throughput at
-  larger scale; loss curve diagnostics — spikes, plateaus, divergence, "loss가
-  갑자기 튀었어", why loss changed after a parallelism config change; gradient
-  norm behaviour; compute budgets, Chinchilla and scaling laws, "7B 모델
-  토큰 몇 개 학습해야 해"; and how to benchmark two configurations honestly.
-  Do NOT activate for: choosing parallelism degrees or ZeRO stage (use
-  distributed-train:parallelism-strategies); collectives, NCCL, bucketing or
-  hangs (use distributed-train:communication-backends); single-GPU kernels,
-  roofline, precision or peak FLOPs of a chip (use distributed-train:gpu-architecture);
-  OOM, activation checkpointing or offload (use distributed-train:memory-offloading).
-  Also do NOT activate for real cluster operations — reading a running job's
-  metrics dashboard, job logs, job status, quota, or submitting a benchmark
-  job. That is mlops:forge-train.
+  computing MFU and HFU and what is achievable, FLOP counting and the 6N rule,
+  tokens/s, scaling efficiency and strong vs weak scaling, step-time modelling
+  and predicting larger scale, loss spikes / plateaus / divergence, why loss
+  changed after a parallelism config change, gradient-norm behaviour, compute
+  budgets and Chinchilla, benchmarking two configs honestly,
+  "GPU 8장 썼는데 5.2배밖에 안 빨라졌어", "loss가 갑자기 튀었어".
+  Do NOT activate for parallelism degrees or ZeRO stage (parallelism-strategies),
+  collectives/NCCL/hangs (communication-backends), single-GPU kernels or a chip's
+  peak FLOPs (gpu-architecture), or OOM/checkpointing/offload
+  (memory-offloading). Do NOT activate for real cluster operations — a job's
+  metrics dashboard, job logs, job status, quota: mlops:forge-train.
 ---
 
 # Training Metrics
