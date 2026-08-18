@@ -1,0 +1,163 @@
+{
+  "skill_name": "training-metrics",
+  "evals": [
+    {
+      "id": 1,
+      "name": "compute-mfu-correctly",
+      "prompt": "7B non-embedding params, 8 H100s, global batch 256, seq len 4096, 18.9 s per step. What's our MFU?",
+      "expected_output": "MFU = 6*N*B*s / (T*P_peak*n) with dense 989 TFLOP/s: about 33%, and flags the sparse-peak trap.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "formula",
+          "description": "Gives MFU = 6·N·tokens_per_step / (T · P_peak · n) or equivalent"
+        },
+        {
+          "id": "dense-peak",
+          "description": "Uses the dense H100 bf16 peak of ~989 TFLOP/s and warns against the 1979 sparse figure"
+        },
+        {
+          "id": "numeric-answer",
+          "description": "Produces a numeric MFU in the roughly 30–35% range"
+        },
+        {
+          "id": "shows-work",
+          "description": "Shows the intermediate token count and FLOP count rather than just asserting a percentage"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "mfu-vs-hfu",
+      "prompt": "MFU랑 HFU가 뭐가 달라? activation recomputation 켜면 어떻게 돼?",
+      "expected_output": "MFU counts model-definition FLOPs, HFU counts all executed FLOPs; under full recompute HFU/MFU ~ 8/6 ~ 1.33; MFU <= HFU always; MFU is the cross-system metric.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "definitions",
+          "description": "Defines MFU as model-required FLOPs and HFU as all FLOPs the hardware executed"
+        },
+        {
+          "id": "ratio-8-over-6",
+          "description": "States that under full recomputation HFU/MFU is about 8/6 ≈ 1.33"
+        },
+        {
+          "id": "mfu-le-hfu",
+          "description": "States MFU ≤ HFU always"
+        },
+        {
+          "id": "mfu-is-comparable",
+          "description": "Says MFU is the number to compare across systems because it is invariant to the recomputation choice"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "6n-breaks-at-long-context",
+      "prompt": "6N FLOPs per token 공식이 항상 맞아? 언제 안 맞아?",
+      "expected_output": "Breaks when attention dominates: attention fraction is s/(6h), so it exceeds 50% of FLOPs when s > 6h. Cites the Megatron correction term.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "attention-not-counted",
+          "description": "States 6N counts only parameterized matmuls and omits the attention score computation, which has no parameters"
+        },
+        {
+          "id": "s-over-6h",
+          "description": "Gives the attention fraction as s/(6h) or equivalently that attention exceeds 50% of FLOPs when s > 6h"
+        },
+        {
+          "id": "numeric-example",
+          "description": "Gives a concrete threshold, e.g. that at h=4096 the crossover is around s≈24576"
+        },
+        {
+          "id": "undercount-direction",
+          "description": "Notes that at long context 6N undercounts, so MFU computed from it is understated"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "scaling-efficiency-diagnosis",
+      "prompt": "GPU 8장 썼는데 5.2배밖에 안 빨라졌어. 이거 심각한 거야? 뭐부터 확인해야 해?",
+      "expected_output": "5.2/8 = 65% strong-scaling efficiency; asks strong vs weak first, then compute-to-comm ratio 6*b*m*s/bytes, then whether the 8 GPUs cross a node boundary, then step-time variance.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "computes-65pct",
+          "description": "Computes the efficiency as about 65% (5.2/8)"
+        },
+        {
+          "id": "strong-vs-weak",
+          "description": "Asks or states whether this is strong or weak scaling, and notes they have different expectations"
+        },
+        {
+          "id": "node-boundary",
+          "description": "Raises whether the 8 GPUs cross a node boundary, since NVLink to fabric is a large step down"
+        },
+        {
+          "id": "compute-comm-ratio",
+          "description": "Brings up the compute-to-communication ratio, e.g. 6·b·m·s per wire byte, and that raising m or b improves it"
+        },
+        {
+          "id": "variance-check",
+          "description": "Suggests checking whether step time is stable or variable, to separate bandwidth from straggler/bubble"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "loss-changed-after-config-change",
+      "prompt": "TP를 1에서 2로 바꿨더니 loss curve가 달라졌어. parallelism은 수학적으로 같아야 하는 거 아니야?",
+      "expected_output": "Yes it should be identical; the first suspect is that B = b*m*d changed because t does not multiply the batch; then token-weighted loss, per-axis RNG seeding, and data sharding by n instead of d.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "batch-invariant-first",
+          "description": "Identifies B = b·m·d as the first thing to check, and that t (tensor parallel) does not multiply the batch"
+        },
+        {
+          "id": "explains-halving",
+          "description": "Explains that ranks in a TP group process the same samples, so raising t at fixed n halves d and therefore halves B"
+        },
+        {
+          "id": "token-weighted-loss",
+          "description": "Raises token-weighted loss versus mean-of-per-rank-means as a possible cause"
+        },
+        {
+          "id": "rng-per-axis",
+          "description": "Raises RNG seeding — dropout must differ across DP ranks but be identical within a TP group"
+        },
+        {
+          "id": "says-should-be-identical",
+          "description": "Affirms that parallelism should not change the mathematics, so this is a correctness bug not a tuning issue"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "realistic-mfu-expectations",
+      "prompt": "What MFU do the best large training runs actually achieve? Our run is at 41% — is that bad?",
+      "expected_output": "Cites PaLM 46.2%, Megatron 52% of peak, MegaScale 55.2%, Llama 3 38-43%; 41% is normal; flags that >60% warrants an audit of the three inflations.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "cites-published",
+          "description": "Cites at least two specific published MFU figures with their runs (e.g. PaLM 46.2%, MegaScale 55.2%, Llama 3 38–43%)"
+        },
+        {
+          "id": "41-is-fine",
+          "description": "Concludes 41% is a normal, healthy number rather than a problem"
+        },
+        {
+          "id": "range-38-55",
+          "description": "Conveys that the best engineered runs land roughly in the high 30s to mid 50s"
+        },
+        {
+          "id": "audit-high-claims",
+          "description": "Notes that a much higher claim warrants auditing how FLOPs were counted — sparse peak, counting recompute, or including embeddings"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "skill_name": "communication-backends",
+  "evals": [
+    {
+      "id": 1,
+      "name": "ring-vs-tree-tradeoff",
+      "prompt": "NCCL all-reduce에서 ring이랑 tree가 뭐가 달라? 언제 뭘 쓰는 거야?",
+      "expected_output": "Ring: bandwidth-optimal 2(n-1)S/n but latency 2(n-1)*alpha linear in n. Tree: ~2*log2(n)*alpha latency, so wins for small/medium messages at large n. NCCL picks by size and world size.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "ring-bandwidth-optimal",
+          "description": "States ring achieves the bandwidth lower bound, moving about 2(n−1)S/n bytes per rank"
+        },
+        {
+          "id": "ring-latency-linear",
+          "description": "States ring's latency term is 2(n−1)·α, i.e. linear in the number of ranks"
+        },
+        {
+          "id": "tree-log-latency",
+          "description": "States the tree/double-binary-tree latency is about 2·log₂(n)·α, logarithmic in n"
+        },
+        {
+          "id": "double-tree-mechanism",
+          "description": "Explains double binary trees as building a second tree where the first tree's leaves become internal nodes, so every rank both sends and receives"
+        },
+        {
+          "id": "selection-rule",
+          "description": "Says trees win for small/medium messages and rings for large messages where bandwidth dominates"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "busbw-vs-algbw",
+      "prompt": "nccl-tests를 돌렸더니 algbw가 8 GB/s인데 우리 링크는 200 Gb/s짜리야. 이거 문제 있는 거야?",
+      "expected_output": "Converts 200 Gb/s to 25 GB/s; explains algbw vs busbw and applies the 2(n-1)/n correction for all-reduce before comparing to link speed.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "gb-to-gbyte",
+          "description": "Converts the vendor's 200 Gb/s to 25 GB/s by dividing by 8"
+        },
+        {
+          "id": "algbw-vs-busbw-defined",
+          "description": "Distinguishes algbw (S/T, what the application sees) from busbw (what the wire carries)"
+        },
+        {
+          "id": "allreduce-correction",
+          "description": "States the all-reduce busbw correction factor is 2(n−1)/n and applies it before comparing to link speed"
+        },
+        {
+          "id": "compare-busbw",
+          "description": "Says busbw, not algbw, is the number to compare against the hardware, because algbw never reaches line rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "timeout-means-a-rank-missing",
+      "prompt": "Our job died with 'Watchdog caught collective operation timeout'. Should I just increase the NCCL timeout?",
+      "expected_output": "No. A collective is a barrier, so a timeout means some rank never arrived. Ranks the causes by base rate starting with divergent control flow, and describes flight-recorder localization.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-dont-raise-timeout",
+          "description": "Advises against simply raising the timeout as the fix"
+        },
+        {
+          "id": "barrier-insight",
+          "description": "States that a collective is a barrier, so a timeout means some rank never arrived at it, not that the network is slow"
+        },
+        {
+          "id": "reporting-rank-not-culprit",
+          "description": "Notes the rank that reported the timeout is one that DID arrive, so the culprit is a silent rank"
+        },
+        {
+          "id": "divergent-control-flow-first",
+          "description": "Names divergent control flow (a rank skipping or taking a different branch, or an unequal dataloader length) as the most common cause"
+        },
+        {
+          "id": "flight-recorder",
+          "description": "Describes using the flight recorder / trace buffer and comparing collective sequence numbers across ranks to find which rank is behind"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "bucket-size-derivation",
+      "prompt": "Why does gradient bucketing help, and how should I pick the bucket size?",
+      "expected_output": "k(alpha+beta*s) vs alpha+beta*k*s saves (k-1)*alpha; bucket must exceed S*=alpha/beta but stay small enough to leave overlap window; ~25MB default.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "alpha-beta-model",
+          "description": "Uses the α + β·S cost model explicitly"
+        },
+        {
+          "id": "k-minus-1-alpha-saving",
+          "description": "Shows the saving from bucketing is about (k−1)·α, the amortized per-message latency"
+        },
+        {
+          "id": "crossover-point",
+          "description": "Notes the bucket should be larger than the latency/bandwidth crossover S* = α/β"
+        },
+        {
+          "id": "overlap-tradeoff",
+          "description": "Notes a too-large bucket delays the start of communication and shrinks the overlap window with backward compute"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "checkpoint-interval-math",
+      "prompt": "체크포인트 저장에 120초 걸리고, job 단위 MTBF가 3시간이야. 얼마나 자주 저장해야 최적이야?",
+      "expected_output": "T_opt = sqrt(2*C*MTBF) = sqrt(2*120*10800) ~ 1610s ~ 27 min, with ~15% overhead split evenly between write cost and lost work.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "formula",
+          "description": "States the optimal interval as T_opt ≈ sqrt(2·C·MTBF)"
+        },
+        {
+          "id": "computes-answer",
+          "description": "Computes a numeric answer of roughly 1600 seconds / about 25–30 minutes"
+        },
+        {
+          "id": "two-terms-equal",
+          "description": "Notes that at the optimum the checkpoint-write cost and the expected lost work are equal"
+        },
+        {
+          "id": "attributes-young-daly",
+          "description": "Attributes the result to Young/Daly rather than presenting it as a rule of thumb"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "overlap-broken-diagnosis",
+      "prompt": "My profile shows all the NCCL kernels running in one long block after the backward pass finishes, instead of overlapping. I'm using gradient accumulation. What's wrong?",
+      "expected_output": "Missing no_sync() on the first m-1 micro-batches so an all-reduce fires every micro-batch; also lists host syncs, find_unused_parameters, and global grad clipping.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "names-no-sync",
+          "description": "Identifies missing no_sync() (or equivalent) under gradient accumulation as the likely cause"
+        },
+        {
+          "id": "explains-m-fold-cost",
+          "description": "Explains that without it an all-reduce fires every micro-batch, costing m times the expected communication"
+        },
+        {
+          "id": "other-causes",
+          "description": "Lists at least one other overlap breaker such as a host sync (.item()/.cpu()), find_unused_parameters=True, or global gradient clipping before the reduce"
+        },
+        {
+          "id": "expected-good-pattern",
+          "description": "Describes what a healthy profile looks like: NCCL kernels interleaved with backward compute, with only the last bucket exposed"
+        }
+      ]
+    }
+  ]
+}

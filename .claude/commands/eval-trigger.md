@@ -1,16 +1,32 @@
 ---
-description: Run trigger evals for a distributed-train skill, plus an optional head-to-head test against mlops:forge-train. Empirically tests whether the skill description causes Claude to actually invoke it. Usage: /eval-trigger <skill-name>
+description: Run trigger evals for a distributed-train skill on Sonnet 5.0 by default, plus a head-to-head test against mlops:forge-train. Empirically tests whether the skill description causes Claude to actually invoke it. Usage: /eval-trigger <skill-name> [model]
 ---
 
 # distributed-train Trigger Eval
 
 Empirically test whether the **$ARGUMENTS** skill description causes Claude to actually invoke it — using an isolated `claude -p` subprocess with only the target skill visible.
 
+## Model
+
+Run on **`claude-sonnet-5`** unless the user explicitly passes a different
+model as the second argument. Sonnet is what most users hit, and triggering is
+the decision most sensitive to model: a description that only Opus resolves
+correctly is a description that fails in practice.
+
+- Default: `claude-sonnet-5`
+- Override: `/eval-trigger <skill-name> claude-opus-5`
+- Both: run one pass per model and report side by side. A query that triggers
+  on one model and not the other is a **description bug**, not model variance
+  — the wording is leaning on inference the weaker model does not make.
+
+Always state the model in the report header. A trigger rate without a model
+attached is not comparable to anything.
+
 ## How it works
 
 For each query in `trigger_evals.json`:
 1. A stub plugin dir is created containing **only** the target skill's `SKILL.md`
-2. `claude -p "<query>"` runs via Python `subprocess.Popen` with `--plugin-dir <stub>` and `--setting-sources ''` — subprocess sees exactly one skill (plus Claude Code built-ins)
+2. `claude -p "<query>"` runs via Python `subprocess.Popen` with `--model claude-sonnet-5`, `--plugin-dir <stub>`, and `--setting-sources ''` — subprocess sees exactly one skill (plus Claude Code built-ins)
 3. stream-json is parsed line-by-line; trigger detected via `stream_event/content_block_start` → process killed immediately before skill executes
 4. All queries run in parallel via `ThreadPoolExecutor`
 
@@ -51,6 +67,7 @@ import json, os, select, signal, subprocess, time
 from concurrent.futures import ThreadPoolExecutor
 
 SKILL = "$ARGUMENTS"
+MODEL = os.environ.get("EVAL_MODEL", "claude-sonnet-5")
 STUB  = f"/tmp/trigger-eval-{SKILL}/stub"
 OUT   = f"/tmp/trigger-eval-{SKILL}/results"
 os.makedirs(OUT, exist_ok=True)
@@ -75,7 +92,8 @@ def kill_proc(p):
 def run_query(item):
     env = {k: v for k, v in os.environ.items() if k not in UNSET}
     p = subprocess.Popen(
-        ["claude", "-p", item["query"], "--plugin-dir", STUB,
+        ["claude", "-p", item["query"], "--model", MODEL,
+         "--plugin-dir", STUB,
          "--setting-sources", "", "--output-format", "stream-json",
          "--verbose", "--include-partial-messages"],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -113,7 +131,8 @@ with ThreadPoolExecutor(max_workers=10) as pool:
         idx, triggered = future.result()
         ev = futures[future]
         open(f"{OUT}/{idx}.json", "w").write(
-            json.dumps({"query": ev["query"], "should_trigger": ev["should_trigger"], "triggered": triggered}))
+            json.dumps({"query": ev["query"], "should_trigger": ev["should_trigger"],
+                        "triggered": triggered, "model": MODEL}))
 
 print("done")
 ```
@@ -121,8 +140,14 @@ print("done")
 ## Step 4: Run in the background and wait
 
 ```bash
-python3 -u /tmp/trigger-eval-$ARGUMENTS/run.py > /tmp/trigger-eval-$ARGUMENTS/run.log 2>&1 &
+# default: Sonnet 5.0
+EVAL_MODEL=claude-sonnet-5 \
+  python3 -u /tmp/trigger-eval-$ARGUMENTS/run.py > /tmp/trigger-eval-$ARGUMENTS/run.log 2>&1 &
 ```
+
+To run a different model, set `EVAL_MODEL` to the id the user passed. To run
+two models, launch one process per model with distinct `OUT` dirs and logs —
+they share no state and can run concurrently.
 
 Then poll until complete:
 
@@ -137,7 +162,7 @@ cat /tmp/trigger-eval-$ARGUMENTS/run.log
 Read all result files and compare `triggered` vs `should_trigger`:
 
 ```
-$ARGUMENTS — trigger eval (empirical)
+$ARGUMENTS — trigger eval (empirical, model=claude-sonnet-5)
 ──────────────────────────────────────────────────
 
 PASS  [trigger]     just pushed feat(payments): add Stripe webhook...
@@ -227,9 +252,9 @@ must **not** be stolen by `communication-backends`.
 ### Step H3 — runner
 
 Same subprocess mechanics as Part 1 (same `UNSET` list, same background
-execution, same `--setting-sources ''`), with one change: instead of returning
-a boolean, capture the **`input.command` / skill name** from the `Skill`
-tool_use block.
+execution, same `--setting-sources ''`, same `--model claude-sonnet-5` unless
+overridden), with one change: instead of returning a boolean, capture the
+**`input.command` / skill name** from the `Skill` tool_use block.
 
 ```python
 def detect_skill(ev):
@@ -280,6 +305,7 @@ rm -rf /tmp/trigger-eval-headtohead
 
 - `claude plugin validate . --strict` passes
 - both manifests at the same version
+- run on **`claude-sonnet-5`** (the default; Opus-only passes do not count)
 - per-skill trigger eval **≥85% overall**
 - **100%** on the forge-train ops negatives in each per-skill set
 - head-to-head routes **all 6** ops queries to `forge-train`

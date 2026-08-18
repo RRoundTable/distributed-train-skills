@@ -1,0 +1,151 @@
+{
+  "skill_name": "distributed-training-router",
+  "evals": [
+    {
+      "id": 1,
+      "name": "four-budget-separating-test",
+      "prompt": "Our training is slow. GPU util is low, there's no OOM, and step time is stable across steps. What's the bottleneck and what do I look at?",
+      "expected_output": "Applies the four-budget frame: low MFU + low util + no OOM + stable step time points at bandwidth (not serialization, which would show variance). Routes to communication.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "names-four-budgets",
+          "description": "Names the four budgets — compute, capacity, bandwidth, serialization — as the frame"
+        },
+        {
+          "id": "concludes-bandwidth",
+          "description": "Concludes bandwidth is the binding budget for this specific combination of symptoms"
+        },
+        {
+          "id": "uses-stability",
+          "description": "Uses the fact that step time is STABLE to rule out straggler/serialization, which would show variance"
+        },
+        {
+          "id": "rules-out-others",
+          "description": "Explicitly rules out capacity (no OOM) and compute (util is low, not high)"
+        },
+        {
+          "id": "routes-correctly",
+          "description": "Routes to the communication/collectives area for the next step rather than proposing a random fix"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "notation-and-invariants",
+      "prompt": "분산학습 설정에서 d, t, p, c가 각각 뭐고, 서로 어떤 관계야? global batch는 어떻게 계산해?",
+      "expected_output": "d/t/p/c are data/tensor/pipeline/context parallel degrees; n = d*t*p*c; B = b*m*d and t,p,c do NOT multiply the batch.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "defines-degrees",
+          "description": "Defines d, t, p, c as data, tensor, pipeline, and context parallel degrees"
+        },
+        {
+          "id": "mesh-invariant",
+          "description": "States the mesh invariant n = d·t·p·c"
+        },
+        {
+          "id": "batch-invariant",
+          "description": "States the batch invariant B = b·m·d"
+        },
+        {
+          "id": "tpc-not-in-batch",
+          "description": "States explicitly that t, p, and c do NOT multiply the global batch, because those ranks process the same samples"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "where-do-i-start",
+      "prompt": "분산학습 처음인데, 70B 모델 학습하려면 뭐부터 순서대로 봐야 해?",
+      "expected_output": "Orders it capacity -> parallelism -> communication -> measurement, because each answer constrains the next, and stresses that steps 1-3 are predictions and only measurement is evidence.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "ordered-sequence",
+          "description": "Gives an ordered sequence rather than an unordered list of topics"
+        },
+        {
+          "id": "fit-first",
+          "description": "Starts with whether the model fits in memory, since that constrains everything downstream"
+        },
+        {
+          "id": "measure-last",
+          "description": "Ends with measurement (MFU / throughput) as the step that validates the earlier choices"
+        },
+        {
+          "id": "predictions-vs-evidence",
+          "description": "Makes the point that the configuration steps are predictions and only measurement is evidence"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "gpu-util-caveat",
+      "prompt": "우리 GPU util이 100%니까 하드웨어는 잘 쓰고 있는 거지?",
+      "expected_output": "No — util is a liveness signal only, not efficiency; a memory-bound kernel reports 100%. MFU is the real number.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-no",
+          "description": "States that 100% utilization does not mean the hardware is being used efficiently"
+        },
+        {
+          "id": "liveness-only",
+          "description": "Characterizes nvidia-smi utilization as a liveness signal — whether any kernel is resident — not a fraction of peak"
+        },
+        {
+          "id": "names-mfu",
+          "description": "Names MFU (or achieved FLOP/s) as the metric that actually answers the question"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "routes-cluster-ops-away",
+      "prompt": "우리 job이 QUEUED 상태에서 안 넘어가는데 왜 그래? 그리고 로그도 좀 봐줘.",
+      "expected_output": "Recognizes this as a cluster/platform operations question and defers to the platform skill (mlops:forge-train) rather than guessing at CLI or cluster state.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "defers-to-platform",
+          "description": "Recognizes this as a cluster operations question and defers it to the platform skill rather than answering from theory"
+        },
+        {
+          "id": "names-forge-train",
+          "description": "Names mlops:forge-train (or the platform/ops skill) as the correct owner"
+        },
+        {
+          "id": "no-invented-cli",
+          "description": "Does NOT invent forge CLI commands or cluster-specific configuration values"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "symptom-to-owner-routing",
+      "prompt": "I have three problems: (a) torch.cuda.OutOfMemoryError, (b) 8 GPUs only gave 5.2x speedup, (c) a collective timeout. Which is which kind of problem?",
+      "expected_output": "Maps each to a budget and an owner: OOM=capacity/memory, 5.2x=bandwidth/throughput measurement, timeout=serialization/communication with the barrier insight.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "oom-capacity",
+          "description": "Classifies the OOM as a capacity problem and routes it to memory/offloading"
+        },
+        {
+          "id": "scaling-bandwidth",
+          "description": "Classifies the 5.2x speedup as a bandwidth (or measurement-first) problem and routes it to throughput/communication"
+        },
+        {
+          "id": "timeout-serialization",
+          "description": "Classifies the collective timeout as a serialization problem and routes it to communication"
+        },
+        {
+          "id": "timeout-barrier-insight",
+          "description": "Notes for the timeout that a collective is a barrier, so some rank never arrived"
+        }
+      ]
+    }
+  ]
+}

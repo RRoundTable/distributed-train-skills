@@ -1,0 +1,171 @@
+{
+  "skill_name": "parallelism-strategies",
+  "evals": [
+    {
+      "id": 1,
+      "name": "zero2-is-bandwidth-free",
+      "prompt": "우리는 지금 DDP로 학습 중인데 메모리가 빠듯해. ZeRO-2로 바꾸면 통신량이 늘어나서 느려질까?",
+      "expected_output": "Says ZeRO-2 moves the same 2Ψ as DDP, justified by AllReduce = ReduceScatter ∘ AllGather, so it is effectively free; contrasts with ZeRO-3 at 3Ψ.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "zero2-literal-2psi",
+          "description": "States ZeRO-2's volume as the literal quantity 2Ψ (twice the parameter count), not just 'about the same' or 'roughly equal'"
+        },
+        {
+          "id": "rs-ag-identity",
+          "description": "Justifies it with the identity AllReduce = ReduceScatter ∘ AllGather, and notes ring all-reduce already executes it in those two phases"
+        },
+        {
+          "id": "zero3-literal-3psi",
+          "description": "Gives ZeRO-3/FSDP's volume as the literal quantity 3Ψ, and attributes the extra Ψ to gathering parameters twice — once for forward, once for backward"
+        },
+        {
+          "id": "per-rank-state-formula",
+          "description": "Gives the per-rank model-state formula: DDP 2Ψ+2Ψ+KΨ = 16Ψ versus ZeRO-2's 2Ψ + (2Ψ+KΨ)/d, with K=12 for fp32-master Adam"
+        },
+        {
+          "id": "no-bandwidth-argument",
+          "description": "Concludes there is no bandwidth argument for keeping DDP over ZeRO-2, rather than hedging that ZeRO-2 is 'probably fine'"
+        },
+        {
+          "id": "activations-caveat",
+          "description": "Notes ZeRO shards model states but NOT activations, so it does not help if activations are what is tight"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "pipeline-bubble-formula",
+      "prompt": "Why does pipeline parallelism have a bubble, and how large is it? How do I make it smaller?",
+      "expected_output": "Gives bubble = (p-1)/(m+p-1), explains fill/drain, says raise m, and notes m trades against d because B = b*m*d.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "exact-formula",
+          "description": "States the bubble fraction as (p−1)/(m+p−1) explicitly"
+        },
+        {
+          "id": "fill-drain-mechanism",
+          "description": "Explains it as the pipeline fill and drain phases where stages have no micro-batch to run"
+        },
+        {
+          "id": "raise-m",
+          "description": "Says the lever is increasing the number of micro-batches m relative to p"
+        },
+        {
+          "id": "m-vs-d-tradeoff",
+          "description": "Notes that raising m at fixed global batch forces d down, because B = b·m·d — so PP and DP compete"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "tp-must-stay-in-node",
+      "prompt": "I have 2 nodes with 8 H100s each. Should I set tensor parallel degree to 16 so the model shards across both nodes?",
+      "expected_output": "Says no; TP's per-layer 4*b*s*h all-reduce is on the critical path and must stay within the NVLink domain; suggests t<=8 and PP or ZeRO across nodes.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-no",
+          "description": "Advises against TP=16 spanning two nodes"
+        },
+        {
+          "id": "four-allreduce-volume",
+          "description": "Identifies TP's cost as roughly 4 all-reduces per layer per step on activations of size b·s·h"
+        },
+        {
+          "id": "critical-path",
+          "description": "Notes this traffic is on the critical path between matmuls and cannot be overlapped/hidden, unlike DP's all-reduce"
+        },
+        {
+          "id": "t-le-node",
+          "description": "Gives the rule that t should not exceed the NVLink domain / node size, and suggests PP or ZeRO-3 for the inter-node axis"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "sp-vs-cp-distinction",
+      "prompt": "sequence parallelism이랑 context parallelism이 같은 거야? 차이가 뭔지 정확히 알려줘.",
+      "expected_output": "Separates them: Megatron SP shards only LN/dropout regions and is volume-neutral; CP/ring attention shards the whole sequence including attention with K/V rotation and is its own mesh axis.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-different",
+          "description": "States clearly that they are NOT the same thing"
+        },
+        {
+          "id": "sp-scope",
+          "description": "Describes Megatron sequence parallelism as sharding only the layernorm/dropout (non-tensor-parallel) regions, leaving attention unchanged"
+        },
+        {
+          "id": "sp-volume-neutral",
+          "description": "Notes SP replaces TP's all-reduce with a reduce-scatter/all-gather pair at the same total volume, so it is essentially free memory"
+        },
+        {
+          "id": "cp-ring-kv",
+          "description": "Describes context parallelism as sharding the full sequence with K/V blocks circulating in a ring, and as a separate mesh axis c"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "mesh-design-with-invariants",
+      "prompt": "1024 H100s, a 405B dense model, sequence length 8192, target global batch 2048 samples. Give me a concrete parallelism configuration.",
+      "expected_output": "Gives a full (d,t,p,c) tuple, shows d*t*p*c = 1024, keeps t<=8 in-node, shows B = b*m*d = 2048, and checks m >= 4p for the bubble.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "full-tuple",
+          "description": "Gives a complete (d, t, p, c) tuple"
+        },
+        {
+          "id": "mesh-invariant-shown",
+          "description": "Explicitly evaluates d·t·p·c as arithmetic and shows it equals 1024"
+        },
+        {
+          "id": "batch-invariant-named",
+          "description": "Names the batch invariant as B = b·m·d and shows the arithmetic reaching 2048, not merely deriving a gradient-accumulation count"
+        },
+        {
+          "id": "rejects-alternative-with-arithmetic",
+          "description": "Rejects at least one specific alternative by arithmetic — e.g. notes (8,16,8,1) also multiplies to 1024 but puts tensor parallelism across two nodes"
+        },
+        {
+          "id": "prices-each-axis",
+          "description": "Prices each axis in communication-volume terms (TP's 4·L·b·s·h on the critical path, PP's 2·b·s·h point-to-point per boundary, DP's 3Ψ under ZeRO-3)"
+        },
+        {
+          "id": "bubble-quantified",
+          "description": "Quantifies the pipeline bubble using (p−1)/(m+p−1), and gives the interleaved value (1/v)·(p−1)/m if interleaving is proposed"
+        },
+        {
+          "id": "activations-are-binding",
+          "description": "Identifies activations rather than model states as the binding constraint, e.g. by showing 16Ψ/1024 is trivially small"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "moe-active-vs-total",
+      "prompt": "DeepSeek-V3는 671B total에 37B activated라던데, MFU 계산할 때랑 메모리 계산할 때 각각 어느 숫자를 써야 해?",
+      "expected_output": "MFU/FLOPs use N_active (37B) via 6N; memory planning uses N_total (671B) since every expert must be resident somewhere.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "mfu-uses-active",
+          "description": "Says FLOPs and MFU must use the activated parameter count (37B), not the total"
+        },
+        {
+          "id": "memory-uses-total",
+          "description": "Says memory planning must use the total parameter count (671B), because all experts must live somewhere"
+        },
+        {
+          "id": "inflation-warning",
+          "description": "Warns that using N_total for MFU inflates it (by roughly E/k, here about 18x)"
+        }
+      ]
+    }
+  ]
+}

@@ -121,16 +121,38 @@ figure.
 
 ## Development
 
-Run a skill's trigger evals:
+Two eval suites, both defaulting to **`claude-sonnet-5`** — the model most
+users hit, and the one where a weak description or a buried fact actually
+fails.
+
+**Trigger evals** — does the description fire?
 
 ```
-/eval-trigger parallelism-strategies
+/eval-trigger parallelism-strategies            # sonnet by default
+/eval-trigger parallelism-strategies claude-opus-5
 ```
 
-The command also carries a **head-to-head** stage that puts all six of our
-`SKILL.md` files in one stub alongside a copy of forge-train's and grades on
-*which* skill was invoked — the only test that proves cluster-operations
-queries are not crowded out.
+Also carries a **head-to-head** stage that puts all six of our `SKILL.md`
+files in one stub alongside a copy of forge-train's and grades on *which*
+skill was invoked — the only test that proves cluster-operations queries are
+not crowded out.
+
+**Behavioral evals** — once it fires, does it change the answer?
+
+```
+/eval-behavior parallelism-strategies
+```
+
+Every case runs twice, with and without the skill's content injected, and the
+**gap** is the number that matters. 36 cases / ~150 assertions across the six
+skills, written against specific checkable quantities (`(p−1)/(m+p−1)`,
+`s·b·h·(34 + 5as/h)`, the H100 dense ridge point of 295) rather than vague
+ones — a base model already says "communication overhead matters", so an
+assertion that accepts that measures nothing.
+
+A case that passes *without* the skill is a signal to tighten the assertion or
+cut the content; a case that fails *with* it is a content bug in the reference
+files.
 
 Validate the plugin:
 

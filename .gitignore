@@ -5,3 +5,6 @@ __pycache__/
 node_modules/
 /tmp/
 *.log
+
+# behavioral-eval output workspace (scratch, not source)
+/evals/

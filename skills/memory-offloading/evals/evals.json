@@ -1,0 +1,163 @@
+{
+  "skill_name": "memory-offloading",
+  "evals": [
+    {
+      "id": 1,
+      "name": "13b-on-80gb",
+      "prompt": "A100 80GB 한 장에 13B 모델을 bf16 + Adam으로 full fine-tuning 할 수 있어? 안 되면 batch size를 줄이면 될까?",
+      "expected_output": "No: model states are 16*Psi = 208 GB, independent of batch size, so lowering b cannot help. Lists ZeRO sharding, CPU offload, or PEFT as the routes.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "16-psi",
+          "description": "Uses the 16Ψ (2+2+12) bytes-per-parameter model-state budget"
+        },
+        {
+          "id": "208gb",
+          "description": "Computes about 208 GB of model states for 13B"
+        },
+        {
+          "id": "batch-irrelevant",
+          "description": "States explicitly that lowering batch size does NOT help because model states are independent of batch size"
+        },
+        {
+          "id": "gives-routes",
+          "description": "Offers concrete alternatives: sharding across GPUs with ZeRO, CPU offload of the optimizer, 8-bit optimizer, or PEFT/LoRA"
+        },
+        {
+          "id": "distinguishes-peft",
+          "description": "Distinguishes full fine-tuning from LoRA/PEFT rather than answering 'yes' on the strength of PEFT"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "oom-triage-order",
+      "prompt": "We're getting CUDA OOM in the forward pass. Someone suggested turning on gradient checkpointing. Is that the right first move?",
+      "expected_output": "Not first: selective recomputation (~2-5%) beats full recompute (~25-33%); before either, lower b and raise m (free) and use a fused attention kernel. Prices each rung.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "selective-before-full",
+          "description": "Distinguishes selective activation recomputation (~2–5% overhead) from full recomputation (~25–33%) and prefers selective"
+        },
+        {
+          "id": "cheaper-steps-first",
+          "description": "Names cheaper prior steps such as lowering micro-batch b while raising m, or using a fused attention kernel"
+        },
+        {
+          "id": "prices-options",
+          "description": "Attaches an explicit cost (percent step time or extra communication) to the options rather than listing them unpriced"
+        },
+        {
+          "id": "forward-pass-means-activations",
+          "description": "Uses the fact that the OOM is in the forward pass to conclude the problem is activations rather than model states or optimizer state"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "activation-memory-formula",
+      "prompt": "Give me the activation memory formula for one transformer layer, and tell me which term dominates at long sequence length.",
+      "expected_output": "s*b*h*(34 + 5as/h) bytes; the 5as/h attention term is quadratic in s and dominates; selective recompute removes exactly that term.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "exact-formula",
+          "description": "States the per-layer activation memory as s·b·h·(34 + 5as/h) bytes"
+        },
+        {
+          "id": "term-breakdown",
+          "description": "Explains the 34 as attention block + MLP + layernorms, and the 5as/h as the attention score path"
+        },
+        {
+          "id": "quadratic-term-dominates",
+          "description": "Identifies 5as/h as quadratic in s and therefore dominant at long sequence"
+        },
+        {
+          "id": "selective-removes-it",
+          "description": "Notes that selective recomputation removes exactly the 5as/h term, which is why it is so cheap for how much it saves"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "fragmentation-signature",
+      "prompt": "OOM 에러에 'reserved memory is much greater than allocated memory'라고 나와. 메모리가 진짜 부족한 거야?",
+      "expected_output": "No — that is fragmentation: free bytes exist but no contiguous block. Recommends expandable_segments:True and uniform shapes; explains the caching allocator.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "not-real-shortage",
+          "description": "States this is fragmentation rather than a genuine shortage — there is free memory but no contiguous block large enough"
+        },
+        {
+          "id": "caching-allocator",
+          "description": "Explains the caching allocator holds segments, so reserved minus allocated is memory paid for but unusable"
+        },
+        {
+          "id": "expandable-segments",
+          "description": "Recommends expandable_segments:True (PYTORCH_CUDA_ALLOC_CONF) as the primary fix"
+        },
+        {
+          "id": "uniform-shapes",
+          "description": "Suggests making tensor shapes uniform (padding/bucketing sequence lengths) as a cause and fix"
+        },
+        {
+          "id": "not-empty-cache-in-loop",
+          "description": "Does not recommend calling empty_cache() inside the training loop, or explicitly warns against it"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "offload-is-capability-not-performance",
+      "prompt": "학습이 느려서 그런데, optimizer를 CPU로 offload하면 GPU 메모리가 늘어나니까 더 빨라질까?",
+      "expected_output": "No — offload is a capability tool, not a performance tool. PCIe is ~50x slower than HBM. It is the right thing to offload only because the optimizer step is low-AI and once per step.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-not-faster",
+          "description": "States plainly that offload will not make training faster"
+        },
+        {
+          "id": "bandwidth-inequality",
+          "description": "Gives the bandwidth gap, e.g. PCIe ~64 GB/s versus HBM ~2000–3350 GB/s, roughly 30–50x"
+        },
+        {
+          "id": "capability-framing",
+          "description": "Uses the framing that offload is a capability tool that lets an otherwise-impossible model run"
+        },
+        {
+          "id": "why-optimizer",
+          "description": "Explains why the optimizer is nonetheless the right thing to offload — low arithmetic intensity and touched once per step, unlike weights and activations"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "more-gpus-under-ddp",
+      "prompt": "We hit OOM on 8 GPUs. Can we just add more nodes to get more memory?",
+      "expected_output": "Not under DDP — it replicates model states, so per-GPU memory is unchanged by n. Only sharding (ZeRO/TP/PP) converts world size into capacity.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "ddp-replicates",
+          "description": "States DDP replicates model states so per-GPU memory does not change with world size"
+        },
+        {
+          "id": "sharding-required",
+          "description": "Says only sharding — ZeRO stages, tensor parallelism, or pipeline parallelism — converts more GPUs into more capacity"
+        },
+        {
+          "id": "names-zero-stage",
+          "description": "Recommends a specific sharding route such as ZeRO-2 or ZeRO-3/FSDP"
+        },
+        {
+          "id": "activations-caveat",
+          "description": "Notes ZeRO shards model states but not activations, so a ZeRO-3 job can still OOM inside a forward pass"
+        }
+      ]
+    }
+  ]
+}

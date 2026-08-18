@@ -1,0 +1,167 @@
+{
+  "skill_name": "gpu-architecture",
+  "evals": [
+    {
+      "id": 1,
+      "name": "h100-ridge-point",
+      "prompt": "What's the roofline ridge point of an H100 SXM in bf16, and what does it tell me about attention?",
+      "expected_output": "989 TFLOP/s dense (not the 1979 sparse figure) / 3.35 TB/s = ~295 FLOP/byte; attention's AI is about the head dim (64-128), well below it, so attention is memory-bound.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "uses-dense-peak",
+          "description": "Uses the DENSE bf16 peak of about 989 TFLOP/s, and notes NVIDIA's 1979 headline figure is with sparsity"
+        },
+        {
+          "id": "hbm-bandwidth",
+          "description": "Uses HBM bandwidth of 3.35 TB/s"
+        },
+        {
+          "id": "ridge-295",
+          "description": "Computes a ridge point of roughly 295 FLOP/byte"
+        },
+        {
+          "id": "attention-ai-head-dim",
+          "description": "States attention's arithmetic intensity is approximately the head dimension, roughly 64–128"
+        },
+        {
+          "id": "attention-memory-bound",
+          "description": "Concludes attention sits well below the ridge point and is therefore memory-bound by construction"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "why-flashattention",
+      "prompt": "Why is FlashAttention faster than naive attention? Does it reduce the number of FLOPs?",
+      "expected_output": "No FLOP reduction; it is IO-aware — never materializes the s x s score matrix in HBM, using tiling plus online softmax, and recomputes scores in backward.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "no-flop-reduction",
+          "description": "States explicitly that FLOPs are unchanged — it is a memory-traffic optimization, not a math one"
+        },
+        {
+          "id": "avoids-s2-materialization",
+          "description": "Says it avoids writing the s×s score matrix to HBM by tiling and keeping blocks in shared memory"
+        },
+        {
+          "id": "online-softmax",
+          "description": "Names online softmax — maintaining a running max and running sum with a rescaling correction — as what makes tiling possible"
+        },
+        {
+          "id": "backward-recompute",
+          "description": "Notes the backward pass recomputes the scores from Q, K, V and saved statistics rather than storing them"
+        },
+        {
+          "id": "quantifies-traffic",
+          "description": "Quantifies the saving, e.g. that HBM traffic drops from O(s²) to O(s·d) or gives a concrete GB figure"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "gpu-util-is-misleading",
+      "prompt": "nvidia-smi says GPU utilization is 100% but our training is clearly slow. Doesn't 100% mean we're compute-bound?",
+      "expected_output": "No. Utilization is the fraction of intervals with any kernel resident, not fraction of peak FLOPs. A memory-bound kernel reports 100%. Asks for achieved FLOP/s and DRAM throughput.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-no",
+          "description": "States that 100% utilization does not mean compute-bound"
+        },
+        {
+          "id": "defines-utilization",
+          "description": "Defines nvidia-smi utilization as the fraction of sampled time with any kernel resident, not a fraction of peak FLOPs"
+        },
+        {
+          "id": "memory-bound-reports-100",
+          "description": "Gives the concrete case that a memory-bound kernel saturating nothing still reports 100%"
+        },
+        {
+          "id": "names-real-metrics",
+          "description": "Names achieved FLOP/s and DRAM throughput (or MFU) as the metrics that actually place the kernel on the roofline"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "fp32-master-weights",
+      "prompt": "메모리를 아끼려고 fp32 master weight를 없애고 bf16만 쓰려는데 괜찮을까?",
+      "expected_output": "Not a memory optimization but a correctness change: bf16 has 8 significand bits so relative updates below ~2^-8 = 0.0039 round away; typical Adam updates are 1e-3 to 1e-6 relative. Mentions stochastic rounding as the escape.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "correctness-not-memory",
+          "description": "Frames dropping the fp32 master as a correctness change, not a memory optimization"
+        },
+        {
+          "id": "bf16-precision-threshold",
+          "description": "States bf16's ~8 significand bits give a smallest representable relative change of about 2⁻⁸ ≈ 0.004"
+        },
+        {
+          "id": "update-magnitude",
+          "description": "Notes typical Adam updates are ~1e-3 to 1e-6 relative to the weight, i.e. below that threshold, so they round away"
+        },
+        {
+          "id": "silent-failure",
+          "description": "Warns the failure is silent — the run does not crash, it just stops learning"
+        },
+        {
+          "id": "stochastic-rounding",
+          "description": "Mentions stochastic rounding (or Kahan summation) as the way to actually make this work"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "fp8-doubles-ridge",
+      "prompt": "If I switch from bf16 to fp8 on H100, do I automatically get a 2x speedup?",
+      "expected_output": "No. FP8 doubles peak FLOP/s but not bandwidth, so the ridge point doubles from ~295 to ~591; ops that were marginally compute-bound become memory-bound and gain far less than 2x.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "says-not-automatic",
+          "description": "Says the speedup is not automatically 2x"
+        },
+        {
+          "id": "ridge-doubles",
+          "description": "States the ridge point doubles because peak FLOP/s doubles while HBM bandwidth is unchanged"
+        },
+        {
+          "id": "gives-591",
+          "description": "Gives the fp8 ridge point as roughly 591 FLOP/byte versus about 295 for bf16"
+        },
+        {
+          "id": "scaling-factors",
+          "description": "Notes fp8 needs per-tensor scaling factors due to its tiny dynamic range, and/or that e4m3 is used for forward and e5m2 for gradients"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "vocab-tile-padding",
+      "prompt": "누가 vocab size를 50257에서 50304로 바꾸면 학습이 빨라진다고 하는데, 진짜야? 왜?",
+      "expected_output": "Yes: tensor-core GEMMs run in fixed tiles, so a dimension not a multiple of 64/128 wastes the final tile. 50304 is the next multiple of 64. Extends to h, FFN size, and per-rank shards h/t.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "confirms-true",
+          "description": "Confirms the claim is real"
+        },
+        {
+          "id": "tile-granularity",
+          "description": "Explains that tensor-core GEMMs execute in fixed tiles, so a partially-filled final tile costs as much as a full one"
+        },
+        {
+          "id": "next-multiple",
+          "description": "Notes 50304 is the next multiple of 64 (and 128) above 50257"
+        },
+        {
+          "id": "generalizes",
+          "description": "Generalizes the check to other GEMM dimensions such as hidden size, FFN intermediate size, or the per-rank shard h/t after tensor parallelism"
+        }
+      ]
+    }
+  ]
+}
