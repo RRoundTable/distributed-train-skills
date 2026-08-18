@@ -146,7 +146,7 @@
       "id": 6,
       "name": "vocab-tile-padding",
       "prompt": "누가 vocab size를 50257에서 50304로 바꾸면 학습이 빨라진다고 하는데, 진짜야? 왜?",
-      "expected_output": "Yes: tensor-core GEMMs run in fixed tiles, so a dimension not a multiple of 64/128 wastes the final tile. 50304 is the next multiple of 64. Extends to h, FFN size, and per-rank shards h/t.",
+      "expected_output": "Yes, and worth ~25% in nanoGPT. Attributes it correctly: the dominant effect is alignment/kernel selection (50257 mod 8 = 1; NVIDIA wants multiples of 8 elements for bf16/fp16, 64 on A100), not tile quantization — the wasted final tile is only 47/50304 = 0.09% of the GEMM, which cannot explain 25%. 50304 is a multiple of 8, 64 and 128. Extends to h, FFN size, and per-rank shards h/t; padding is numerically inert since unused logits are masked out.",
       "files": [],
       "assertions": [
         {
@@ -154,12 +154,16 @@
           "description": "Confirms the claim is real"
         },
         {
-          "id": "tile-granularity",
-          "description": "Explains that tensor-core GEMMs execute in fixed tiles, so a partially-filled final tile costs as much as a full one"
+          "id": "alignment-is-dominant",
+          "description": "Identifies alignment / kernel selection — the dimension not being a multiple of 8 elements (16 bytes) for 16-bit dtypes — as the dominant mechanism, rather than attributing the speedup solely to tile quantization"
+        },
+        {
+          "id": "tile-waste-is-small",
+          "description": "Quantifies the tile-quantization share and notes it is negligible here (roughly 0.09%, one partly-empty tile out of ~393), i.e. too small to explain the measured speedup"
         },
         {
           "id": "next-multiple",
-          "description": "Notes 50304 is the next multiple of 64 (and 128) above 50257"
+          "description": "Notes 50304 is the next multiple of 64 (and is also a multiple of 8 and 128) above 50257"
         },
         {
           "id": "generalizes",

@@ -154,22 +154,59 @@ in the `2Ψ + 2Ψ + KΨ` budget buys, and it is why "just store weights in bf16"
 is a correctness change, not a memory optimization. Details in
 `references/tensor-cores-and-precision.md`.
 
-## Tile granularity — the free few percent
+## Dimension alignment — three effects, not one
 
-Tensor-core GEMMs execute in fixed tiles (typically 128×128 or 128×256 output
-tiles built from 16×8×16 MMA fragments). A dimension that is not a multiple of
-the tile forces a partially-empty final tile whose cost is the same as a full
-one.
+Padding a GEMM dimension to a round number is the cheapest optimization in
+this file. But three distinct mechanisms hide behind it, they operate at very
+different magnitudes, and attributing a speedup to the wrong one leads to
+padding the wrong dimensions.
 
-The canonical example: GPT-2's vocabulary is **50257**. Padding it to
-**50304** — the next multiple of 64 — costs 47 unused embedding rows and
-measurably improves throughput on the output projection and its gradient,
-because 50257 is a prime-adjacent size that wastes most of its last tile. The
-same argument applies to hidden sizes, FFN intermediate sizes, and per-rank
-shard sizes after tensor parallelism: `h/t` should stay tile-aligned.
+| Effect | Granularity | Bites when |
+|---|---|---|
+| **Alignment / kernel selection** | 8 elements = 16 bytes for fp16/bf16 | always, regardless of dimension size — **the largest of the three** |
+| **Tile quantization** | 64–128 (the thread-block tile) | the dimension is *small* relative to the tile |
+| **Wave quantization** | the SM count | the tile count lands just past a multiple of the SMs |
 
-Check divisibility by 64 or 128 on every dimension that reaches a GEMM. It is
-the cheapest optimization in this file.
+**Alignment.** NVIDIA's guidance is multiples of **8 elements for FP16/BF16**
+(and multiples of **64 on A100**), 4 for TF32, 16 for INT8. Before cuBLAS 11.0
+this was a hard requirement for using tensor cores at all; since then they run
+at any alignment, but "efficiency is better when matrix dimensions are
+multiples of 16 bytes". So the modern failure is not tensor cores switching
+off — it is a different, slower kernel being selected, silently.
+
+**Tile quantization.** Tensor-core GEMMs run in fixed output tiles (128×128 or
+128×256, built from `m16n8k16` MMA fragments), and a partially-filled final
+tile costs as much as a full one. NVIDIA's own example executes **1.5× the
+arithmetic** for a shape needing only 0.39% more work algorithmically.
+
+**Wave quantization.** Tiles are distributed across SMs in waves; one tile past
+a wave boundary nearly doubles the time. Throughput versus batch size is a
+step function, not a curve.
+
+### The canonical example, attributed correctly
+
+GPT-2's vocabulary is **50257**; padding to **50304** is worth roughly **25%**
+of nanoGPT's step time (Karpathy). It is tempting — and wrong — to credit tile
+quantization. Do the arithmetic:
+
+```
+50257 = 128 × 392 + 81      →  393 tiles, covering 50304 columns
+wasted                       =  47 / 50304  =  0.09% of the GEMM
+```
+
+**0.09% cannot produce a 25% speedup.** The last tile is 37% empty, but it is
+one tile out of 393. The actual cause is alignment: `50257 mod 8 = 1`, so the
+dimension is not a multiple of 8 elements and the GEMM "goes down a different
+kernel path with much higher occupancy" once padded. 50304 is a multiple of
+8, 64, and 128, so it fixes all three effects at once — but the 25% is the
+alignment layer.
+
+The generalization still holds, and now for the right reason: check **8 first,
+then 64/128**, on every dimension that reaches a GEMM — vocabulary, hidden
+size, FFN intermediate size, and especially the **per-rank shard `h/t`**,
+because tensor parallelism can break an alignment the full model had. Padding
+costs a rounding error in parameter count and changes nothing numerically
+(unused logits are masked out of the loss).
 
 ## Diagnosing a slow kernel
 
@@ -203,6 +240,6 @@ the cheapest optimization in this file.
 |---|---|
 | `references/memory-hierarchy.md` | registers/SMEM/L1/L2/HBM, capacities and bandwidths, occupancy, coalescing, microbenchmark-derived cache numbers |
 | `references/roofline-and-arithmetic-intensity.md` | the model derived, ridge-point table, AI for every transformer op, worked examples, the hierarchical roofline |
-| `references/tensor-cores-and-precision.md` | MMA shapes, tile quantization, dtype anatomy, loss scaling, fp8 scaling, the fp32 master-weight argument |
+| `references/tensor-cores-and-precision.md` | MMA shapes, alignment vs tile vs wave quantization and their relative magnitudes, dtype anatomy, loss scaling, fp8 scaling, the fp32 master-weight argument |
 | `references/kernel-fusion-and-flash-attention.md` | fusion economics, online softmax derived, FlashAttention 1/2/3, torch.compile and Triton |
 | `references/profiling-with-nsight.md` | Nsight Systems vs Compute vs the PyTorch profiler, what to measure, reading a timeline, common misreadings |

@@ -22,47 +22,110 @@ what makes bf16 training numerically viable — the products are computed in
 bf16 but summed in fp32, so a length-`K` dot product does not accumulate bf16
 rounding error `K` times.
 
-## Tile quantization
+## Dimension alignment: three effects at three scales
 
-Because the hardware works in tiles, a GEMM dimension that is not a multiple
-of the tile size wastes the remainder of the final tile — which costs the same
-as a full one.
+"Pad the dimension to a round number" bundles three separate mechanisms. They
+differ by more than an order of magnitude in impact, so they are worth
+separating before attributing any measured speedup.
+
+### 1. Alignment and kernel selection — the big one
+
+A 16-bit element is 2 bytes, so a 16-byte vectorized access covers 8 elements.
+NVIDIA's matrix-multiplication guide gives the requirement directly:
+
+> matrix dimensions would need to be multiples of 8 elements for best
+> efficiency (or 64 elements on A100)
+
+with 4 for TF32 (32 on A100) and 16 for INT8 (128 on A100). Older library
+versions made this a hard requirement:
+
+> With cuBLAS versions before 11.0 or cuDNN before 7.6.3, this is a
+> requirement to use Tensor Cores; as of cuBLAS 11.0 and cuDNN 7.6.3, Tensor
+> Cores may be used regardless, but efficiency is better when matrix
+> dimensions are multiples of 16 bytes.
+
+So on any current stack it is not "tensor cores off"; it is a **different,
+slower kernel selected**. That distinction matters because the failure is
+silent and shape-dependent — nothing errors, and a nearby shape is fine.
+
+### 2. Tile quantization
+
+A GEMM dimension that is not a multiple of the thread-block tile wastes the
+remainder of the final tile, which costs the same as a full one.
 
 ```
 tiles needed = ceil(M/T_m) · ceil(N/T_n)
 efficiency   = (M·N) / (ceil(M/T_m)·T_m · ceil(N/T_n)·T_n)
 ```
 
-At `T = 128` and `N = 129`, you pay for 256 columns to compute 129 — 50%
-waste on that dimension.
+At `T = 128` and `N = 129` you pay for 256 columns to compute 129 — 50% waste.
+NVIDIA's documented example executes **1.5× the arithmetic operations** for a
+shape that needs only 0.39% more work algorithmically.
 
-**The canonical example.** GPT-2's vocabulary is **50257**. The output
-projection is `[b·s, h] × [h, V]`, so `V` is a GEMM dimension. Padding
-`V = 50257 → 50304` (the next multiple of 64, and also of 128) adds 47 unused
-rows — a rounding error in parameter count — and produces a measurable
-throughput improvement on the output projection and its backward. The unused
-logits are masked out of the loss, so nothing changes numerically.
+The magnitude depends entirely on how large the dimension is relative to the
+tile. The waste is one partial tile out of `ceil(N/T)`, so it decays as `1/N`:
 
-Dimensions to check for tile alignment:
+| `N` at `T = 128` | tiles | wasted fraction of the GEMM |
+|---|---|---|
+| 129 | 2 | 50% |
+| 1000 | 8 | 2.3% |
+| 50257 | 393 | **0.09%** |
 
-| Dimension | Should be a multiple of |
-|---|---|
-| vocabulary `V` | 64 or 128 (and of `t` for vocab parallelism) |
-| hidden size `h` | 128 |
-| FFN intermediate size | 128 |
-| head dimension `d_h` | 64 (usually already 64/128) |
-| **per-rank shard `h/t`** | 128 — TP can break alignment that the full model had |
-| batch × sequence `b·s` | 128 where practical |
+**Tile quantization is a small-dimension problem.** For a vocabulary-sized
+dimension it is nearly irrelevant, which is exactly what the next section
+turns on.
+
+### 3. Wave quantization
+
+One level up: tiles are distributed across SMs in waves, so a GEMM producing
+133 tiles on a 132-SM chip runs two waves and takes nearly twice as long as
+one producing 132. NVIDIA's A100 example shows GFLOPS roughly halving each
+time the tile count crosses a multiple of 108 (A100's SM count). Throughput
+versus batch size is therefore a **step function**, and benchmarking a few
+nearby shapes beats assuming monotonicity.
+
+## The canonical example, attributed correctly
+
+GPT-2's vocabulary is **50257**. The output projection is `[b·s, h] × [h, V]`,
+so `V` is a GEMM dimension. Padding `V = 50257 → 50304` adds 47 unused rows —
+a rounding error in parameter count, and numerically inert because the unused
+logits are masked out of the loss — and Karpathy measured it as nanoGPT's
+single largest optimization at **~25%** of step time, describing the cause as
+going "down a different kernel path with much higher occupancy".
+
+It is natural to credit tile quantization for this, and it is wrong:
+
+```
+50257 = 128 × 392 + 81       →  393 tiles covering 50304 columns
+tile waste                    =  47 / 50304  =  0.09% of the GEMM
+```
+
+The final tile is 37% empty, but it is one tile in 393. **A 0.09% arithmetic
+saving cannot yield a 25% speedup.** The mechanism is §1: `50257 mod 8 = 1`,
+so the dimension is not a multiple of 8 elements, and the library selects a
+worse kernel. 50304 happens to be a multiple of 8, 64, and 128, so padding
+fixes all three effects simultaneously — but only one of them was worth 25%.
+
+The practical order that follows: **check divisibility by 8 first, then by
+64/128.** A dimension that is a multiple of 8 but not 128 is leaving a little
+on the table; a dimension that is odd is leaving a lot.
+
+Dimensions to check for alignment:
+
+| Dimension | Must be a multiple of 8 | Prefer |
+|---|---|---|
+| vocabulary `V` | yes | 64 or 128 (and of `t` for vocab parallelism) |
+| hidden size `h` | yes | 128 |
+| FFN intermediate size | yes | 128 |
+| head dimension `d_h` | yes | 64 (usually already 64/128) |
+| **per-rank shard `h/t`** | yes | 128 — TP can break alignment the full model had |
+| batch × sequence `b·s` | yes | 128 where practical |
 
 The per-rank row is the one that catches people: `h = 8192` with `t = 8` gives
-`1024` (fine), but an FFN intermediate of `11008` with `t = 8` gives `1376`,
-which is a multiple of 32 but not of 128.
-
-There is also a **wave quantization** effect one level up: the GPU runs tiles
-in waves across SMs, so a GEMM producing 133 tiles on a 132-SM chip runs two
-waves and takes nearly twice as long as one producing 132. This shows up as a
-step-function in throughput versus batch size and is a reason to benchmark a
-few nearby shapes rather than assume monotonicity.
+`1024` (fine), but an FFN intermediate of `11008` with `t = 8` gives `1376` —
+a multiple of 32, and of 8, but not of 128. That one costs tile efficiency
+without falling off the alignment cliff. A shard that comes out **odd** is the
+serious case.
 
 ## The dtypes
 
@@ -175,5 +238,13 @@ and the speedup will be far below 2×.
 - Benchmarking and Dissecting the Nvidia Hopper GPU Architecture — arXiv:2402.13499
 - NVIDIA Hopper architecture overview —
   https://resources.nvidia.com/en-us-hpc-ai/nvidia-hopper-architecture
+- NVIDIA Deep Learning Performance Guide, *Matrix Multiplication Background* —
+  per-dtype alignment requirements, the cuBLAS 11.0 relaxation, tile
+  quantization (1.5× arithmetic for 0.39% more work), wave quantization across
+  108 SMs —
+  https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html
+- Karpathy on nanoGPT's vocabulary padding, 50257 → 50304, ~25% speedup via
+  "a different kernel path with much higher occupancy" —
+  https://x.com/karpathy/status/1621578354024677377
 - GLM-130B (a documented case study in large-scale precision/stability
   problems and their mitigations) — arXiv:2210.02414
