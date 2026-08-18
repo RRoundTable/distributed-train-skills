@@ -1,6 +1,6 @@
 {
   "name": "distributed-train",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Distributed training theory, math, and debugging playbooks — parallelism strategies (DP/ZeRO/FSDP/TP/PP/CP/EP), collective communication, GPU architecture and roofline, MFU and scaling metrics, and memory/offloading. Knowledge, not cluster operations.",
   "author": {
     "name": "RRoundTable",
