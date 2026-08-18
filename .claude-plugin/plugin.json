@@ -1,0 +1,33 @@
+{
+  "name": "distributed-train",
+  "version": "0.1.0",
+  "description": "Distributed training theory, math, and debugging playbooks — parallelism strategies (DP/ZeRO/FSDP/TP/PP/CP/EP), collective communication, GPU architecture and roofline, MFU and scaling metrics, and memory/offloading. Knowledge, not cluster operations.",
+  "author": {
+    "name": "RRoundTable",
+    "email": "ryu071511@gmail.com"
+  },
+  "repository": "https://github.com/RRoundTable/distributed-train-skills",
+  "license": "MIT",
+  "keywords": [
+    "distributed-training",
+    "parallelism",
+    "fsdp",
+    "zero",
+    "megatron",
+    "nccl",
+    "collective-communication",
+    "gpu-architecture",
+    "roofline",
+    "mfu",
+    "memory-optimization",
+    "llm-training"
+  ],
+  "skills": [
+    "./skills/distributed-training-router",
+    "./skills/parallelism-strategies",
+    "./skills/communication-backends",
+    "./skills/gpu-architecture",
+    "./skills/training-metrics",
+    "./skills/memory-offloading"
+  ]
+}

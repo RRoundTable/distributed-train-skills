@@ -1,0 +1,16 @@
+{
+  "name": "distributed-train-skills",
+  "owner": {
+    "name": "RRoundTable",
+    "email": "ryu071511@gmail.com"
+  },
+  "description": "Distributed training knowledge for Claude Code — theory, math, and debugging playbooks for parallelism, collective communication, GPU architecture, training metrics, and memory. Complements platform/ops plugins rather than replacing them.",
+  "plugins": [
+    {
+      "name": "distributed-train",
+      "source": "./",
+      "version": "0.1.0",
+      "description": "Distributed training theory, math, and debugging playbooks — parallelism strategies (DP/ZeRO/FSDP/TP/PP/CP/EP), collective communication, GPU architecture and roofline, MFU and scaling metrics, and memory/offloading. Knowledge, not cluster operations."
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "query": "분산학습 처음인데 뭐부터 봐야 해?",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to train a 70B model from scratch — where do I even start?",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain the whole distributed training stack to me",
+    "should_trigger": true
+  },
+  {
+    "query": "What's the difference between DDP, FSDP, Megatron, and DeepSpeed? I'm confused about how they all relate",
+    "should_trigger": true
+  },
+  {
+    "query": "Our training run is slow and I have no idea why — memory looks fine, network looks fine",
+    "should_trigger": true
+  },
+  {
+    "query": "대규모 모델 학습할 때 고려해야 할 것들 전반적으로 정리해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "Give me a mental model for reasoning about distributed training bottlenecks",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to pick a parallelism strategy but I also don't know if it'll fit in memory or saturate the network — help me think about it",
+    "should_trigger": true
+  },
+  {
+    "query": "분산학습에서 쓰는 용어랑 기호 정리해줘. Ψ, d, t, p 이런 거",
+    "should_trigger": true
+  },
+  {
+    "query": "Why does scaling to more GPUs stop helping at some point?",
+    "should_trigger": true
+  },
+  {
+    "query": "멀티 GPU 학습 개념부터 설명해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "What should I read first to understand large-scale LLM training?",
+    "should_trigger": true
+  },
+  {
+    "query": "GPU 4장으로 학습 job 띄워줘",
+    "should_trigger": false
+  },
+  {
+    "query": "내 job 로그에서 NCCL error 확인해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "forge quota 확인해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "방금 실패한 job 로그 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "multi-node로 submit 하는 법 알려줘",
+    "should_trigger": false
+  },
+  {
+    "query": "job이 QUEUED에서 안 넘어가는데 왜 그래?",
+    "should_trigger": false
+  },
+  {
+    "query": "Derive the pipeline bubble ratio for GPipe",
+    "should_trigger": false
+  },
+  {
+    "query": "How does ring all-reduce achieve bandwidth optimality?",
+    "should_trigger": false
+  },
+  {
+    "query": "A100 80GB에 13B bf16 + Adam 학습 가능해?",
+    "should_trigger": false
+  },
+  {
+    "query": "What's the ridge point of an H100 in bf16?",
+    "should_trigger": false
+  }
+]

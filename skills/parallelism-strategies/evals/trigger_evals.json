@@ -1,0 +1,94 @@
+[
+  {
+    "query": "Explain why pipeline parallelism has a bubble",
+    "should_trigger": true
+  },
+  {
+    "query": "DDP랑 FSDP 차이가 뭐야?",
+    "should_trigger": true
+  },
+  {
+    "query": "Should I use TP=8 or TP=4 with PP=2 for a 70B model on 64 GPUs?",
+    "should_trigger": true
+  },
+  {
+    "query": "What's the difference between ZeRO stage 2 and stage 3?",
+    "should_trigger": true
+  },
+  {
+    "query": "70B 모델을 어떻게 쪼개서 학습해야 해?",
+    "should_trigger": true
+  },
+  {
+    "query": "How does Megatron split the MLP across GPUs — why column then row?",
+    "should_trigger": true
+  },
+  {
+    "query": "sequence parallelism이랑 context parallelism이랑 뭐가 달라?",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain ring attention and how the K/V blocks rotate",
+    "should_trigger": true
+  },
+  {
+    "query": "Why is tensor parallelism supposed to stay inside a node?",
+    "should_trigger": true
+  },
+  {
+    "query": "How does expert parallelism work in an MoE model, and what's the capacity factor?",
+    "should_trigger": true
+  },
+  {
+    "query": "Design a 4D parallelism mesh for 1024 H100s training a 405B model",
+    "should_trigger": true
+  },
+  {
+    "query": "interleaved 1F1B schedule이 bubble을 어떻게 줄여?",
+    "should_trigger": true
+  },
+  {
+    "query": "What does ZeRO-3 cost in communication compared to ZeRO-2?",
+    "should_trigger": true
+  },
+  {
+    "query": "How much comm volume does DDP move per step?",
+    "should_trigger": true
+  },
+  {
+    "query": "GPU 8장짜리 학습 job 제출해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "job 로그 보고 왜 죽었는지 알려줘",
+    "should_trigger": false
+  },
+  {
+    "query": "forge에서 multi-node 학습 어떻게 띄워?",
+    "should_trigger": false
+  },
+  {
+    "query": "내 GPU quota 얼마나 남았어?",
+    "should_trigger": false
+  },
+  {
+    "query": "How does the ring all-reduce algorithm actually work step by step?",
+    "should_trigger": false
+  },
+  {
+    "query": "A100 80GB에 7B 모델 activation memory 얼마나 필요해?",
+    "should_trigger": false
+  },
+  {
+    "query": "What MFU should I expect on H100?",
+    "should_trigger": false
+  },
+  {
+    "query": "Why is FlashAttention faster than naive attention?",
+    "should_trigger": false
+  },
+  {
+    "query": "우리 학습 loss가 갑자기 튀었어, 왜 그럴까?",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,90 @@
+[
+  {
+    "query": "GPU 8장 썼는데 5.2배밖에 안 빨라졌어. 왜 그럴까?",
+    "should_trigger": true
+  },
+  {
+    "query": "How do I compute MFU for my training run?",
+    "should_trigger": true
+  },
+  {
+    "query": "Why is the 6N FLOPs per token rule wrong at long context?",
+    "should_trigger": true
+  },
+  {
+    "query": "MFU랑 HFU 차이가 뭐야?",
+    "should_trigger": true
+  },
+  {
+    "query": "Our loss spiked at step 40k and never recovered — what are the likely causes?",
+    "should_trigger": true
+  },
+  {
+    "query": "Loss가 parallelism config 바꾸고 나서 달라졌는데 정상이야?",
+    "should_trigger": true
+  },
+  {
+    "query": "What's a realistic MFU for a large training run — what do published papers report?",
+    "should_trigger": true
+  },
+  {
+    "query": "Predict what my step time will be at 128 GPUs given measurements at 8, 16, and 32",
+    "should_trigger": true
+  },
+  {
+    "query": "Chinchilla 기준으로 7B 모델은 토큰 몇 개 학습해야 해?",
+    "should_trigger": true
+  },
+  {
+    "query": "How do I benchmark two parallelism configs fairly?",
+    "should_trigger": true
+  },
+  {
+    "query": "Is strong scaling or weak scaling what I should be measuring here?",
+    "should_trigger": true
+  },
+  {
+    "query": "gradient norm이 한 rank에서만 튀는데 뭘 의심해야 해?",
+    "should_trigger": true
+  },
+  {
+    "query": "How many tokens can I train on 512 H100s in 30 days?",
+    "should_trigger": true
+  },
+  {
+    "query": "Why is my MFU above 100%? What did I compute wrong?",
+    "should_trigger": true
+  },
+  {
+    "query": "우리 job의 metrics dashboard 좀 열어줘",
+    "should_trigger": false
+  },
+  {
+    "query": "방금 실패한 job 로그 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "GPU 4장짜리 job 띄워줘",
+    "should_trigger": false
+  },
+  {
+    "query": "forge quota 확인",
+    "should_trigger": false
+  },
+  {
+    "query": "Explain how ZeRO-3 shards optimizer state",
+    "should_trigger": false
+  },
+  {
+    "query": "NCCL ring이랑 tree 차이가 뭐야?",
+    "should_trigger": false
+  },
+  {
+    "query": "CUDA out of memory가 났는데 어떻게 해?",
+    "should_trigger": false
+  },
+  {
+    "query": "Why does attention have low arithmetic intensity?",
+    "should_trigger": false
+  }
+]

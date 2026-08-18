@@ -1,0 +1,90 @@
+[
+  {
+    "query": "What MFU should a 7B model reach on H100?",
+    "should_trigger": true
+  },
+  {
+    "query": "H100에서 roofline ridge point가 얼마야?",
+    "should_trigger": true
+  },
+  {
+    "query": "Why is FlashAttention faster than naive attention?",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain online softmax and how it lets attention be tiled",
+    "should_trigger": true
+  },
+  {
+    "query": "Is my kernel memory-bound or compute-bound, and how do I tell?",
+    "should_trigger": true
+  },
+  {
+    "query": "bf16이랑 fp16 중에 뭘 써야 해? 왜 bf16이 학습에 더 나아?",
+    "should_trigger": true
+  },
+  {
+    "query": "Why do we need fp32 master weights in mixed precision training?",
+    "should_trigger": true
+  },
+  {
+    "query": "What's arithmetic intensity and why is attention's so low?",
+    "should_trigger": true
+  },
+  {
+    "query": "vocab size를 50257에서 50304로 바꾸면 왜 빨라져?",
+    "should_trigger": true
+  },
+  {
+    "query": "How should I read Nsight Compute output for a slow kernel?",
+    "should_trigger": true
+  },
+  {
+    "query": "nvidia-smi에서 GPU util 100%인데 왜 느려?",
+    "should_trigger": true
+  },
+  {
+    "query": "What does FP8 do to the roofline ridge point?",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain what torch.compile and TorchInductor actually fuse",
+    "should_trigger": true
+  },
+  {
+    "query": "A100 40GB랑 80GB의 peak FLOPs랑 bandwidth 차이가 성능에 어떤 영향을 줘?",
+    "should_trigger": true
+  },
+  {
+    "query": "어떤 GPU가 지금 비어 있어?",
+    "should_trigger": false
+  },
+  {
+    "query": "H100 job 하나 띄워줘",
+    "should_trigger": false
+  },
+  {
+    "query": "내 job의 nvidia-smi 출력 좀 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "forge quota 확인해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "How does ring all-reduce work?",
+    "should_trigger": false
+  },
+  {
+    "query": "13B 모델이 80GB에 들어가?",
+    "should_trigger": false
+  },
+  {
+    "query": "Should I use pipeline parallelism or ZeRO-3?",
+    "should_trigger": false
+  },
+  {
+    "query": "우리 loss curve가 이상한데 봐줄래?",
+    "should_trigger": false
+  }
+]

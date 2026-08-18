@@ -1,0 +1,94 @@
+[
+  {
+    "query": "A100 80GB에 13B bf16 + Adam 학습 가능해?",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm getting CUDA out of memory — what should I try first?",
+    "should_trigger": true
+  },
+  {
+    "query": "How much memory does a 7B model need for training?",
+    "should_trigger": true
+  },
+  {
+    "query": "gradient checkpointing 켜면 얼마나 느려져?",
+    "should_trigger": true
+  },
+  {
+    "query": "What's the difference between full and selective activation recomputation?",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain the activation memory formula for a transformer layer",
+    "should_trigger": true
+  },
+  {
+    "query": "reserved memory is much greater than allocated memory — what does that mean?",
+    "should_trigger": true
+  },
+  {
+    "query": "expandable_segments가 뭐 하는 거야?",
+    "should_trigger": true
+  },
+  {
+    "query": "Should I offload the optimizer to CPU? What does it cost?",
+    "should_trigger": true
+  },
+  {
+    "query": "8-bit Adam을 쓰면 메모리가 얼마나 줄어?",
+    "should_trigger": true
+  },
+  {
+    "query": "My job OOMs only after 500 steps — the workload is constant",
+    "should_trigger": true
+  },
+  {
+    "query": "Why can't I just drop the fp32 master weights to save memory?",
+    "should_trigger": true
+  },
+  {
+    "query": "What is ZeRO-Infinity and when would I use NVMe offload?",
+    "should_trigger": true
+  },
+  {
+    "query": "OOM이 optimizer.step()에서 나는데 뭘 봐야 해?",
+    "should_trigger": true
+  },
+  {
+    "query": "내 job 로그에서 OOM 났는지 확인해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "job이 exit 137로 죽었어, 왜 그래?",
+    "should_trigger": false
+  },
+  {
+    "query": "메모리 큰 GPU로 job 다시 띄워줘",
+    "should_trigger": false
+  },
+  {
+    "query": "forge quota 확인해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "어떤 GPU 타입을 요청해야 해?",
+    "should_trigger": false
+  },
+  {
+    "query": "How does ring all-reduce work?",
+    "should_trigger": false
+  },
+  {
+    "query": "TP=8이랑 PP=2 중에 뭐가 나아?",
+    "should_trigger": false
+  },
+  {
+    "query": "What MFU should I expect on H100?",
+    "should_trigger": false
+  },
+  {
+    "query": "Why is FlashAttention faster?",
+    "should_trigger": false
+  }
+]

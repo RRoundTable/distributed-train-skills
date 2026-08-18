@@ -1,0 +1,94 @@
+[
+  {
+    "query": "NCCL all-reduce가 ring이랑 tree랑 뭐가 달라?",
+    "should_trigger": true
+  },
+  {
+    "query": "Derive the cost of ring all-reduce and explain why it's bandwidth-optimal",
+    "should_trigger": true
+  },
+  {
+    "query": "What's the difference between busbw and algbw in nccl-tests output?",
+    "should_trigger": true
+  },
+  {
+    "query": "Why does my scaling fall off a cliff when I go from 1 node to 2 nodes?",
+    "should_trigger": true
+  },
+  {
+    "query": "gradient bucketing에서 bucket size는 어떻게 정해?",
+    "should_trigger": true
+  },
+  {
+    "query": "Explain the alpha-beta model for collective communication cost",
+    "should_trigger": true
+  },
+  {
+    "query": "My job hit 'Watchdog caught collective operation timeout' — what does that actually mean?",
+    "should_trigger": true
+  },
+  {
+    "query": "collective timeout이 뜨면 원인을 어떻게 찾아?",
+    "should_trigger": true
+  },
+  {
+    "query": "How do I detect a straggler rank in a distributed training run?",
+    "should_trigger": true
+  },
+  {
+    "query": "What are double binary trees and why do they help at large scale?",
+    "should_trigger": true
+  },
+  {
+    "query": "Is gradient compression worth it for my setup?",
+    "should_trigger": true
+  },
+  {
+    "query": "checkpoint를 얼마나 자주 저장해야 최적이야?",
+    "should_trigger": true
+  },
+  {
+    "query": "Why is all-to-all so much worse than all-reduce on a fat-tree fabric?",
+    "should_trigger": true
+  },
+  {
+    "query": "How does communication overlap with the backward pass, and what breaks it?",
+    "should_trigger": true
+  },
+  {
+    "query": "내 job 로그에서 NCCL error 확인해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "우리 클러스터에서 NCCL_IB_HCA를 뭘로 설정해야 해?",
+    "should_trigger": false
+  },
+  {
+    "query": "GPU 4장으로 job 띄워줘",
+    "should_trigger": false
+  },
+  {
+    "query": "방금 실패한 job 로그 봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "forge quota 확인",
+    "should_trigger": false
+  },
+  {
+    "query": "How much HBM does a 13B model with Adam need?",
+    "should_trigger": false
+  },
+  {
+    "query": "Should I use ZeRO-3 or tensor parallelism for a 70B model?",
+    "should_trigger": false
+  },
+  {
+    "query": "H100의 roofline ridge point가 얼마야?",
+    "should_trigger": false
+  },
+  {
+    "query": "What MFU did Llama 3 405B report?",
+    "should_trigger": false
+  }
+]
