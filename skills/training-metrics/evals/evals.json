@@ -39,15 +39,23 @@
         },
         {
           "id": "ratio-8-over-6",
-          "description": "States that under full recomputation HFU/MFU is about 8/6 ≈ 1.33"
+          "description": "States that under full recomputation HFU/MFU is about 8/6 ≈ 1.33, derived from 6N becoming 8N"
         },
         {
           "id": "mfu-le-hfu",
-          "description": "States MFU ≤ HFU always"
+          "description": "States MFU ≤ HFU always, with equality iff no work is repeated"
+        },
+        {
+          "id": "selective-ratio",
+          "description": "Gives the selective-recomputation ratio as much smaller, roughly 1.02–1.05, versus 1.33 for full recomputation"
+        },
+        {
+          "id": "megatron-coefficient",
+          "description": "Connects this to Megatron's per-iteration coefficient: 96 includes the recompute forward and 72 does not, and 96/72 = 4/3 is the same ratio"
         },
         {
           "id": "mfu-is-comparable",
-          "description": "Says MFU is the number to compare across systems because it is invariant to the recomputation choice"
+          "description": "Says MFU is the cross-system metric because it is invariant to the recomputation choice"
         }
       ]
     },

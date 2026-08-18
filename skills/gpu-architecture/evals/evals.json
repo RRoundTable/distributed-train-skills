@@ -10,23 +10,27 @@
       "assertions": [
         {
           "id": "uses-dense-peak",
-          "description": "Uses the DENSE bf16 peak of about 989 TFLOP/s, and notes NVIDIA's 1979 headline figure is with sparsity"
-        },
-        {
-          "id": "hbm-bandwidth",
-          "description": "Uses HBM bandwidth of 3.35 TB/s"
+          "description": "Uses the DENSE bf16 peak of ~989 TFLOP/s and notes NVIDIA's 1979 headline is with sparsity"
         },
         {
           "id": "ridge-295",
-          "description": "Computes a ridge point of roughly 295 FLOP/byte"
+          "description": "Computes a ridge point of roughly 295 FLOP/byte from 989/3.35"
         },
         {
           "id": "attention-ai-head-dim",
-          "description": "States attention's arithmetic intensity is approximately the head dimension, roughly 64–128"
+          "description": "States attention's arithmetic intensity is approximately the head dimension, 64–128"
         },
         {
-          "id": "attention-memory-bound",
-          "description": "Concludes attention sits well below the ridge point and is therefore memory-bound by construction"
+          "id": "naive-attention-gb-figure",
+          "description": "Gives the concrete naive-attention traffic figure — at b=1, a=32, s=8192 in bf16 the score tensor is about 4.3 GB per layer, written and read several times"
+        },
+        {
+          "id": "ridge-rose-across-generations",
+          "description": "Notes the ridge point ROSE from about 153 on A100-80GB to 295 on H100, so more kernels are memory-bound on newer hardware than on older"
+        },
+        {
+          "id": "a100-40-vs-80",
+          "description": "Notes the A100 40GB has a HIGHER ridge point (about 201) than the 80GB (about 153) because bandwidth differs at equal peak"
         }
       ]
     },

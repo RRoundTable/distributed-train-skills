@@ -9,24 +9,28 @@
       "files": [],
       "assertions": [
         {
-          "id": "ring-bandwidth-optimal",
-          "description": "States ring achieves the bandwidth lower bound, moving about 2(n−1)S/n bytes per rank"
+          "id": "ring-literal-bound",
+          "description": "Gives ring's bandwidth term as the literal 2(n−1)S/n and states it is a lower bound that ring attains, not merely 'bandwidth-optimal'"
         },
         {
-          "id": "ring-latency-linear",
-          "description": "States ring's latency term is 2(n−1)·α, i.e. linear in the number of ranks"
+          "id": "ring-latency-alpha-form",
+          "description": "Gives ring's latency as the literal 2(n−1)·α, not just O(N)"
         },
         {
-          "id": "tree-log-latency",
-          "description": "States the tree/double-binary-tree latency is about 2·log₂(n)·α, logarithmic in n"
+          "id": "tree-latency-alpha-form",
+          "description": "Gives the tree latency as the literal 2·log₂(n)·α, not just O(log N)"
+        },
+        {
+          "id": "quantified-comparison",
+          "description": "Quantifies the gap at a specific world size — e.g. at n=1024 ring pays 2046α versus the tree's 20α, about 100x"
         },
         {
           "id": "double-tree-mechanism",
-          "description": "Explains double binary trees as building a second tree where the first tree's leaves become internal nodes, so every rank both sends and receives"
+          "description": "Explains the double-binary-tree construction: at least half the ranks in a binary tree are leaves, so a second tree is built with leaves and internal nodes swapped, making every rank both send and receive"
         },
         {
-          "id": "selection-rule",
-          "description": "Says trees win for small/medium messages and rings for large messages where bandwidth dominates"
+          "id": "rs-ag-identity-link",
+          "description": "Connects the ring's two phases to the identity AllReduce = ReduceScatter ∘ AllGather"
         }
       ]
     },
@@ -39,19 +43,23 @@
       "assertions": [
         {
           "id": "gb-to-gbyte",
-          "description": "Converts the vendor's 200 Gb/s to 25 GB/s by dividing by 8"
-        },
-        {
-          "id": "algbw-vs-busbw-defined",
-          "description": "Distinguishes algbw (S/T, what the application sees) from busbw (what the wire carries)"
+          "description": "Converts 200 Gb/s to 25 GB/s by dividing by 8"
         },
         {
           "id": "allreduce-correction",
-          "description": "States the all-reduce busbw correction factor is 2(n−1)/n and applies it before comparing to link speed"
+          "description": "Applies the literal all-reduce correction factor 2(n−1)/n and computes a numeric busbw from the given 8 GB/s"
         },
         {
           "id": "compare-busbw",
-          "description": "Says busbw, not algbw, is the number to compare against the hardware, because algbw never reaches line rate"
+          "description": "States busbw is the figure to compare against link speed because algbw never reaches line rate by construction"
+        },
+        {
+          "id": "large-message-asymptote",
+          "description": "Says to read the large-message asymptote of a size sweep, since small sizes collapse due to the α term and that is not a fabric fault"
+        },
+        {
+          "id": "crossover-interpretation",
+          "description": "Notes the shape of busbw versus message size locates S* = α/β for that fabric, which is what sets bucket sizes and FSDP wrapping granularity"
         }
       ]
     },
@@ -118,19 +126,23 @@
       "assertions": [
         {
           "id": "formula",
-          "description": "States the optimal interval as T_opt ≈ sqrt(2·C·MTBF)"
+          "description": "States T_opt ≈ sqrt(2·C·MTBF)"
         },
         {
           "id": "computes-answer",
-          "description": "Computes a numeric answer of roughly 1600 seconds / about 25–30 minutes"
+          "description": "Computes roughly 1610 seconds / about 27 minutes"
         },
         {
           "id": "two-terms-equal",
-          "description": "Notes that at the optimum the checkpoint-write cost and the expected lost work are equal"
+          "description": "Notes that at the optimum the write cost and the expected lost work are equal, and gives the ~15% total overhead"
         },
         {
-          "id": "attributes-young-daly",
-          "description": "Attributes the result to Young/Daly rather than presenting it as a rule of thumb"
+          "id": "sqrt-c-scaling",
+          "description": "Notes overhead scales as sqrt(2C/M), so halving checkpoint cost cuts total overhead by about 29% (1/√2) — the argument for async/sharded writes"
+        },
+        {
+          "id": "mtbf-from-world-size",
+          "description": "Connects job MTBF to world size via MTBF_job ≈ MTBF_1/n, or cites a real figure such as Llama 3's 419 unexpected interruptions in 54 days on 16K GPUs"
         }
       ]
     },

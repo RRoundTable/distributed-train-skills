@@ -10,7 +10,7 @@
       "assertions": [
         {
           "id": "16-psi",
-          "description": "Uses the 16Ψ (2+2+12) bytes-per-parameter model-state budget"
+          "description": "Uses the 16Ψ = (2+2+K)Ψ budget with K=12 named for fp32-master Adam"
         },
         {
           "id": "208gb",
@@ -18,15 +18,23 @@
         },
         {
           "id": "batch-irrelevant",
-          "description": "States explicitly that lowering batch size does NOT help because model states are independent of batch size"
+          "description": "States lowering batch size does NOT help, because model states are independent of batch size"
         },
         {
-          "id": "gives-routes",
-          "description": "Offers concrete alternatives: sharding across GPUs with ZeRO, CPU offload of the optimizer, 8-bit optimizer, or PEFT/LoRA"
+          "id": "zero-degree-arithmetic",
+          "description": "Gives the sharding degree needed with arithmetic — e.g. ZeRO-3 at d=4 leaves 52 GB per rank, at d=8 leaves 26 GB — rather than saying 'shard it across GPUs'"
+        },
+        {
+          "id": "zero2-option-priced",
+          "description": "Notes ZeRO-2 at d=8 also fits (2Ψ + 14Ψ/8 ≈ 49 GB) and is cheaper on the wire than ZeRO-3"
         },
         {
           "id": "distinguishes-peft",
           "description": "Distinguishes full fine-tuning from LoRA/PEFT rather than answering 'yes' on the strength of PEFT"
+        },
+        {
+          "id": "offload-is-slow",
+          "description": "If it proposes CPU offload, states it is a capability tool that runs at PCIe speed, not a performance win"
         }
       ]
     },
@@ -68,15 +76,23 @@
         },
         {
           "id": "term-breakdown",
-          "description": "Explains the 34 as attention block + MLP + layernorms, and the 5as/h as the attention score path"
+          "description": "Breaks the 34 into its parts — attention block 11, MLP 19, layernorms 4"
         },
         {
           "id": "quadratic-term-dominates",
-          "description": "Identifies 5as/h as quadratic in s and therefore dominant at long sequence"
+          "description": "Identifies 5as/h as quadratic in s and dominant at long sequence"
         },
         {
-          "id": "selective-removes-it",
-          "description": "Notes that selective recomputation removes exactly the 5as/h term, which is why it is so cheap for how much it saves"
+          "id": "crossover-point",
+          "description": "Gives the crossover where the attention term overtakes the 34, i.e. s ≈ 6.8·h/a ≈ 6.8·d_h, and notes it is already crossed for essentially every real configuration"
+        },
+        {
+          "id": "parallelism-variants",
+          "description": "Gives the parallel forms: TP-only s·b·h·(10 + 24/t + 5as/(h·t)), TP+SP (s·b·h/t)(34 + 5as/h), and selective recompute 34·s·b·h/t"
+        },
+        {
+          "id": "flash-attention-caveat",
+          "description": "Notes a fused attention kernel already removes most of the 5as/h term, so enabling selective recomputation on top of it buys little"
         }
       ]
     },
