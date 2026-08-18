@@ -164,6 +164,16 @@ claude plugin details distributed-train
 
 Version must be bumped in **both** `.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` — the plugin cache is keyed by version.
+`claude plugin tag .` fails the release if they disagree.
+
+To pick up a new version, `install` is **not** enough — it no-ops with
+"already installed". Use `update`, and give the full `plugin@marketplace` id
+(the bare plugin name reports "not found"):
+
+```bash
+claude plugin marketplace update distributed-train-skills
+claude plugin update distributed-train@distributed-train-skills
+```
 
 ## Out of scope for v0.1
 
