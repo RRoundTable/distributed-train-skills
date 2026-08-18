@@ -38,6 +38,9 @@ compute / capacity / bandwidth / serialization (router SKILL.md).
 | Throughput fell after enabling gradient checkpointing | compute (paid deliberately) | memory-offloading | expected: full recompute costs ~25–33% of step time |
 | First step is 10× slower than the rest | — | gpu-architecture | autotuning / compile / allocator warm-up. Exclude warm-up steps from every benchmark |
 | Step time creeps upward over hours | capacity | memory-offloading | allocator fragmentation, or a leak; check `reserved` vs `allocated` trend |
+| Step time creeps upward but forward/backward/optimizer times are each **flat** | serialization | training-metrics → communication-backends | not fragmentation — rank *arrival* times at collectives are drifting apart; measure the spread, suspect per-process work on the critical path (GC) |
+| Same config benchmarked twice, differs by several % | serialization | communication-backends | placement varies run to run; a ~10%-slow host anywhere in the job sets the pace |
+| Minutes of dead time between launch and step 1, worse at larger `n` | serialization | communication-backends | rendezvous / process-group init scaling; invisible in any per-step metric |
 | Vocabulary-size change moved throughput several % | compute | gpu-architecture | tile granularity — pad `V` to a multiple of 64/128 |
 
 ## Loss and correctness
@@ -75,6 +78,8 @@ compute / capacity / bandwidth / serialization (router SKILL.md).
 | "What MFU should I expect?" | training-metrics (then gpu-architecture for the peak) |
 | "Why is FlashAttention faster?" | gpu-architecture |
 | "Can I offload the optimizer to CPU?" | memory-offloading |
+| "How often should I checkpoint?" | communication-backends (and first: how expensive is one?) |
+| "The job keeps dying — how do I keep it running?" | communication-backends (goodput = MFU × ETTR) |
 | "How do I submit this on the cluster?" | **mlops:forge-train** |
 
 ## How to use an entry

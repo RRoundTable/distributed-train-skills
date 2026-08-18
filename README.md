@@ -35,7 +35,7 @@ claude plugin install distributed-train@distributed-train-skills
 |---|---|
 | `distributed-train:distributed-training-router` | vague / multi-topic / "where do I start" questions; the shared notation; the four-budget diagnostic frame; the symptom index |
 | `distributed-train:parallelism-strategies` | sharding vs replication, TP·PP·DP·CP·EP degrees, ZeRO stage, mesh design |
-| `distributed-train:communication-backends` | anything on the wire — collective algorithms, α-β cost model, topology, overlap, hangs, stragglers, compression |
+| `distributed-train:communication-backends` | anything on the wire — collective algorithms, α-β cost model, topology, overlap, hangs, stragglers, compression, fault tolerance and checkpoint economics |
 | `distributed-train:gpu-architecture` | inside one GPU — roofline, arithmetic intensity, tensor cores, precision, fusion, FlashAttention, profiling |
 | `distributed-train:training-metrics` | measured numbers — FLOP counting, MFU/HFU, scaling efficiency, loss curves, scaling laws, benchmarking |
 | `distributed-train:memory-offloading` | capacity — the HBM budget, OOM triage, recomputation, offload, fragmentation |
@@ -82,7 +82,8 @@ The design constraint that governs every file in this repo:
 | Anything between GPUs or nodes | `communication-backends` |
 | Inside one GPU: SMs, HBM, peak FLOPs, precision | `gpu-architecture` |
 | Measured numbers, curves, profiles | `training-metrics` |
-| Memory capacity, OOM, offload, checkpointing | `memory-offloading` |
+| Memory capacity, OOM, offload, activation recomputation | `memory-offloading` |
+| Checkpoint cost and interval, fault recovery, node health checks | `communication-backends` |
 | Vague / multi-topic / "where do I start" | `distributed-training-router` |
 | **Any real job on a cluster** — submit, quota, images, disks, logs, launcher flags, exit codes | **`mlops:forge-train`** |
 
@@ -104,7 +105,9 @@ The six skills compose rather than repeat:
   Every other file cites it instead of redefining.
 - **The four-budget frame** — compute / capacity / bandwidth / serialization —
   with a three-observation test that separates them. The symptom→skill routing
-  table is built on it.
+  table is built on it. Past a few hundred GPUs it extends to
+  `goodput = MFU × ETTR`: the four budgets price one step, and availability
+  prices how many steps ran at all.
 - **Derive once, cite elsewhere.** ZeRO's `2Ψ+2Ψ+KΨ` derives in
   `parallelism-strategies`; the activation formula `s·b·h·(34 + 5as/h)`
   derives in `memory-offloading`; ring all-reduce's `2(n−1)S/n` bound derives

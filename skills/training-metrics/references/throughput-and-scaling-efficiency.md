@@ -123,6 +123,48 @@ trustworthy.
 6. **Only now profile.** `distributed-train:gpu-architecture` →
    `gpu-architecture/references/profiling-with-nsight.md`.
 
+## Slow MFU decay within a single run
+
+A distinct problem from poor scaling, and it is missed by every measurement
+protocol that benchmarks the first hundred steps. The signature:
+
+```
+MFU declines gradually over hours or days
+forward, backward, optimizer time    each flat
+wire bandwidth                        flat
+step time                             rising
+```
+
+Every component is constant and the total is growing, so the time is going
+somewhere that is not a component: **the spread in when ranks arrive at their
+collectives.** A collective finishes on the last arrival, so the step pays the
+spread, and the spread can grow while no rank's own work does.
+
+The mechanism found in production (arXiv:2402.15627) was irregular garbage
+collection plus a few PyTorch operations on the critical path — each cheap,
+each firing on a per-process schedule, together enough to desynchronize ranks
+by a growing margin. Removing them stopped the decline.
+
+The discriminating measurement is **per-rank arrival time at a chosen
+collective**, not per-rank step time:
+
+```
+for each step, per rank:  t_arrive(reduce_scatter_k) − t_step_start
+plot the spread (max − min) across ranks, over steps
+```
+
+A rising spread with flat components confirms it. A flat spread means look
+elsewhere — allocator growth, dataloader falling behind, or a thermal ramp
+that raises every rank's compute together (which would show in the component
+times).
+
+The generalizable version, worth applying before it becomes a bug: **anything
+periodic on the critical path whose period is decided per-process is a
+distributed performance problem**, however cheap it is per call. Take it off
+the critical path, or fire it on the same step on every rank. Mechanism and
+straggler cross-references:
+`communication-backends/references/hang-and-straggler-debugging.md`.
+
 ## Common patterns
 
 | Curve | Reading |
@@ -133,6 +175,7 @@ trustworthy.
 | Good scaling but time-to-loss unchanged | `B` past the critical batch size — throughput is not progress |
 | Efficiency > 100% | usually a cache effect from a smaller per-GPU working set, or the baseline was measured badly |
 | Highly variable between identical runs | placement varies, or a straggler that appears intermittently |
+| MFU decays over hours while per-phase compute times stay flat | rank arrival times drifting apart — see the section above, not a bandwidth problem |
 
 The fourth row is the trap that matters most. **Throughput is not progress.**
 A configuration that doubles `tokens/s` by doubling `B` past the critical

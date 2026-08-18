@@ -110,12 +110,27 @@ Achievable, from published runs (all verified):
 |---|---|---|
 | PaLM 540B | 6144 TPU v4 | **46.2%** (57.8% HFU) |
 | Megatron PTD-P 1T | 3072 A100 | 52% of peak, 163 TFLOP/s/GPU |
-| MegaScale 175B | 12288 GPUs | **55.2%** |
+| MegaScale 175B | 12288 GPUs | **55.2%** † |
 | Llama 3 405B | up to 16384 H100 | **38–43%** BF16 |
+
+† MegaScale's 55.2% is measured on a model modified for efficiency — a
+parallel transformer block and sliding-window attention, together worth 5.6 of
+its 17.6 points of improvement (arXiv:2402.15627). It is a valid systems
+result and not an apples-to-apples MFU for a standard dense transformer. The
+general trap is in `references/flop-counting-and-mfu.md` under comparing MFU
+across architectures.
 
 A claim above ~60% on a dense transformer deserves an audit of the three
 inflations. A number below 25% at scale usually means communication or
 bubbles, not kernels.
+
+**MFU is not constant over a run.** These are peak or steady-state figures;
+a real run can decline for reasons no per-step measurement catches, and the
+number that pays for GPUs is `goodput = MFU × ETTR` (the fraction of
+wall-clock spent in useful steps rather than in crash detection, restart, and
+re-doing lost work). Decay diagnosis is in
+`references/throughput-and-scaling-efficiency.md`; the availability half is
+`communication-backends/references/fault-tolerance-and-node-diagnostics.md`.
 
 ## The step-time model
 
@@ -197,8 +212,8 @@ deployment-optimal point. Details and the caveats:
 
 | File | Contents |
 |---|---|
-| `references/flop-counting-and-mfu.md` | `6N` derived, correction terms, MFU/HFU, the three inflations, worked examples, MoE and `N_active` |
-| `references/throughput-and-scaling-efficiency.md` | strong vs weak scaling, the step-time model fitted from three points, diagnosis order, worked prediction |
+| `references/flop-counting-and-mfu.md` | `6N` derived, correction terms, MFU/HFU, the three inflations, comparing MFU across architectures, worked examples, MoE and `N_active` |
+| `references/throughput-and-scaling-efficiency.md` | strong vs weak scaling, the step-time model fitted from three points, diagnosis order, worked prediction, slow MFU decay within a run |
 | `references/loss-curve-diagnostics.md` | spike taxonomy, distributed-specific causes, the correctness checklist, gradient-norm reading, instability literature |
 | `references/compute-budget-and-scaling-laws.md` | Chinchilla, overtraining, budget arithmetic, what scaling laws do and do not predict |
 | `references/benchmarking-methodology.md` | the minimum honest protocol, warm-up, variance, what to hold fixed, how to compare two configs |

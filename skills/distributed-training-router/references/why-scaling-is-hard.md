@@ -28,6 +28,7 @@ In distributed training, `T_serial` is not one thing:
 | optimizer step on unsharded state | constant, but never shrinks |
 | straggler wait | `max` over `n` ranks — grows with `n` |
 | checkpoint write | constant per write, more frequent at scale (see below) |
+| process-group init and restart | worse than linear if the rendezvous or the barrier is `O(n²)` |
 
 The straggler term is the nasty one: it is a **maximum over `n` samples**, so
 even with identical hardware it grows like the tail of the per-rank duration
@@ -121,7 +122,12 @@ hypothetical: the Llama 3 405B report documents **466 job interruptions over
 confirmed hardware issues, with GPU failures the single largest category at
 58.7% of unexpected interruptions (arXiv:2407.21783).
 
-Two consequences:
+MegaScale reports the same regime from the other side: **over 100 automatic
+recoveries** in one multi-week run on 10,000+ GPUs, with over 90% of faults
+detected and repaired without a human, detection and diagnosis inside 10
+minutes, and training caught back up within 15 minutes (arXiv:2402.15627).
+
+Three consequences:
 
 1. Checkpoint interval is an optimization problem, not a habit. The
    Young/Daly result gives `T_opt ≈ sqrt(2 · C · MTBF)` for checkpoint cost
@@ -129,6 +135,19 @@ Two consequences:
    (Daly, *Future Generation Computer Systems* 22(3), 2006, pp. 303–312).
 2. Reproducibility must survive a restart. A run that cannot resume to the
    same loss curve cannot be debugged at this scale.
+3. **Availability becomes a first-class metric.** The quantity that pays for
+   the cluster is
+
+   ```
+   goodput = MFU × ETTR
+   ```
+
+   where ETTR is the fraction of wall-clock spent in useful steps rather than
+   in detection, diagnosis, restart, and re-doing work lost since the last
+   checkpoint. MegaScale reports ETTR above 90% at 10,000+ GPUs. Past a few
+   hundred GPUs, an optimization that adds MFU and subtracts ETTR is a loss —
+   which is why the recovery loop is a performance subject, not an ops one:
+   `communication-backends/references/fault-tolerance-and-node-diagnostics.md`.
 
 ## 7. Why the binding budget moves
 
@@ -154,10 +173,17 @@ Published, verified reference points for "this is achievable":
 |---|---|---|---|
 | PaLM 540B | 6144 TPU v4 | 46.2% MFU (57.8% HFU) | arXiv:2204.02311 |
 | Megatron PTD-P, 1T params | 3072 A100 | 52% of peak, 163 TFLOP/s/GPU | arXiv:2104.04473 |
-| MegaScale, 175B | 12288 GPUs | 55.2% MFU | arXiv:2402.15627 |
+| MegaScale, 175B | 12288 GPUs | 55.2% MFU † | arXiv:2402.15627 |
 | Llama 3 405B | up to 16384 H100 | 38–43% BF16 MFU | arXiv:2407.21783 |
+
+† with a modified transformer block and sliding-window attention — a valid
+systems result, not an apples-to-apples MFU for a standard dense model. See
+`training-metrics/references/flop-counting-and-mfu.md`.
 
 Note the direction: the largest, most carefully engineered runs sit in the
 high 30s to mid 50s. A 25% MFU is not automatically broken, and a claim of
 70%+ on a dense transformer deserves an audit of how the FLOPs were counted
 — see `training-metrics/references/flop-counting-and-mfu.md`.
+
+And note what the table omits: none of these numbers is a goodput. A run
+holding 55% MFU at 70% ETTR delivers less than one holding 45% at 95%.

@@ -209,6 +209,14 @@ Two patterns hold across all of them: `t ≤ 8`, and `p` in the range that
 keeps `m ≥ 4p` at the chosen `B`. A proposed config that violates either
 deserves a second look.
 
+One caveat on the MegaScale row: its 55.2% is measured with a modified block
+structure and sliding-window attention, so it is not an apples-to-apples MFU
+against the others —
+`training-metrics/references/flop-counting-and-mfu.md` under comparing MFU
+across architectures. The same run is also the clearest published case of `m`
+being raised by increasing `B` through the optimizer rather than by giving up
+`d`; see `references/pipeline-parallel.md`.
+
 ## Checklist before committing a config
 
 1. `n = d·t·p·c` — evaluate it, do not eyeball it.

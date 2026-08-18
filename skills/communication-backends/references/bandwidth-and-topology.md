@@ -70,9 +70,47 @@ NCCL's ring construction tries to keep ranks rail-aligned, and why a
 misordered rank-to-GPU mapping can cost a large fraction of fabric bandwidth
 with no error message.
 
+Rail alignment has a second motivation that is usually left implicit:
+**ECMP hashing**. Multi-path fabrics spread flows across uplinks by hashing
+the flow's headers, which works when there are many small flows and fails when
+there are a few enormous ones — two elephant flows landing on the same uplink
+halve each other while a parallel link sits idle. Training traffic is exactly
+the bad case: few flows, all large, all simultaneous. Keeping a collective
+inside one rail avoids the hash entirely.
+
+The scheduling consequence is the practical one. If a set of leaf switches
+covers some number of hosts, a job placed *within* one such set never crosses
+the spine for its heaviest collectives. Placement is therefore a bandwidth
+decision, not just a capacity decision — and it is why the same job can be
+measurably faster or slower depending on where the scheduler put it, with no
+configuration difference at all.
+
 **Dragonfly / torus.** Lower diameter for a given radix, but the routing is
 topology-aware and adversarial traffic patterns (all-to-all) can create
 hotspots. Less common in AI clusters than fat trees.
+
+## What a production fabric tunes beyond the topology
+
+Worth knowing exists, because these are the levers a cluster team pulls when
+the topology is already right and collectives are still slow or unstable
+(MegaScale, arXiv:2402.15627):
+
+| Lever | Why the default is not enough |
+|---|---|
+| **Congestion control** | ECN-marking schemes alone (DCQCN-style) react to queue buildup, but tuning them across thousands of flows is fragile; production systems combine ECN signals with direct RTT measurement (Swift-style) to get both a precise congestion signal and a fast response |
+| **Retransmit timers** | defaults are tuned for links that fail rarely; on a fabric where a flapping link is a weekly event, a shorter, adaptive retransmit turns a stall into a hiccup |
+| **Port splitting** | splitting a high-rate downlink into two lower-rate ports increases the number of paths the ECMP hash can choose from, reducing collision probability |
+| **Cable and transceiver QC** | link flapping usually traces to signal quality between NIC, cable, and switch port — no software setting fixes a marginal transceiver |
+
+The last row is the one to remember when a job intermittently loses
+throughput and every software knob has been tried: **at scale, some fraction
+of the fabric is always physically marginal**, and finding it is a hardware
+process, not a debugging session. That is what the node self-check suite in
+`references/fault-tolerance-and-node-diagnostics.md` exists to automate.
+
+> Platform recipe: which of these are configured on a given cluster, and what
+> values they hold, is `mlops:forge-train`. This table explains what class of
+> problem each addresses.
 
 ## Hierarchical collectives
 

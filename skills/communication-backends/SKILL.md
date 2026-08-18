@@ -7,7 +7,8 @@ description: |
   overlapping comm with compute, NVLink / PCIe / InfiniBand topology and rail
   alignment, why a collective timeout or hang happens ("Watchdog caught
   collective operation timeout", NCCL timeout), straggler detection,
-  flight recorder, checkpoint-interval math, gradient compression,
+  flight recorder, checkpoint-interval math, fault tolerance and goodput/ETTR
+  at scale, node health self-checks, gradient compression,
   "NCCL all-reduce가 ring이랑 tree랑 뭐가 달라".
   Do NOT activate for how much memory a model needs, OOM or offload
   (memory-offloading), parallelism degrees or ZeRO stage
@@ -160,6 +161,14 @@ gives causes ranked by base rate, the flight-recorder localization procedure,
 and the Young/Daly checkpoint-interval result
 `T_opt ≈ sqrt(2·C·MTBF)` for deciding how much work a crash should cost.
 
+Two consequences of that result are easy to miss and are covered in
+`references/fault-tolerance-and-node-diagnostics.md`:
+
+- **`C` is the input you control, not `T`.** Overhead is `sqrt(2C/M)`, so
+  making a checkpoint cheap beats tuning how often you take one.
+- **`goodput = MFU × ETTR`.** Past a few hundred GPUs, a change that adds MFU
+  and subtracts availability is a loss. Report both or neither.
+
 ## Diagnosing a communication problem
 
 1. **Name the regime.** Message size vs `S* = α/β`. Latency, bandwidth, or
@@ -196,5 +205,6 @@ and the Young/Daly checkpoint-interval result
 | `references/collective-algorithms.md` | ring all-reduce derived step by step, the `2(n−1)S/n` bound, RS∘AG, trees, all-to-all, cost table for every collective |
 | `references/bandwidth-and-topology.md` | the bandwidth hierarchy, NVLink/PCIe/IB, rail alignment, oversubscription, hierarchical collectives, busbw arithmetic |
 | `references/overlap-and-scheduling.md` | bucket-size derivation, backward-overlap conditions, FSDP prefetch, what breaks overlap, reading overlap in a trace |
-| `references/hang-and-straggler-debugging.md` | the barrier insight, causes by base rate, flight recorder, straggler detection, Young/Daly checkpoint interval |
+| `references/hang-and-straggler-debugging.md` | the barrier insight, causes by base rate, flight recorder, straggler detection, slow MFU decay from timing drift, Young/Daly checkpoint interval |
+| `references/fault-tolerance-and-node-diagnostics.md` | goodput = MFU × ETTR, the detect→diagnose→evict→resume loop, the self-check suite scoped by level, two-stage checkpointing and broadcast recovery, initialization cost at scale |
 | `references/compression-and-quantized-collectives.md` | where compression can and cannot help, error feedback, 1-bit Adam/LAMB, PowerSGD, fp8/int8 collectives, when the answer is "no" |

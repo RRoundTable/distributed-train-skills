@@ -134,6 +134,37 @@ There is one common *deflation* too: **ignoring the attention correction at
 long context**. At `s = 131072` and `h = 16384`, `s/(6h) = 1.33`, so true
 FLOPs are ~2.3× the `6N` estimate and true MFU is ~2.3× what you computed.
 
+## Comparing MFU across *architectures*
+
+MFU is invariant to your memory and scheduling choices. It is **not** invariant
+to the model definition, because the model definition is the numerator. Two
+systems reporting MFU on "a 175B model" are comparable only if the 175B models
+compute the same function.
+
+Two changes that appear in efficiency-oriented papers and both move MFU:
+
+- **Restructured blocks** (e.g. a parallel transformer block, which computes
+  attention and the MLP from the same normalized input so they can run
+  concurrently). Same parameter count, same `6N`, fewer serialization points —
+  MFU rises, and this one is a fair systems gain.
+- **Sparse or windowed attention.** `O(s·w)` instead of `O(s²)` changes what
+  the model *is*. The numerator must change with it: the `s/(6h)` correction
+  no longer applies, and roughly `w/s` of it remains. Keeping the dense
+  attention term in the numerator while executing the windowed kernel inflates
+  MFU exactly like counting recomputation does.
+
+So when reading a headline MFU alongside an ablation table, check what the
+model was at the top of the table and at the bottom. MegaScale's 55.2% at
+12,288 GPUs (arXiv:2402.15627) comes with both changes enabled: the parallel
+transformer block and sliding-window attention account for 4.6 and 1.0 of its
+17.6 points. The systems work is real and separately itemized — but the number
+to place next to PaLM's 46.2% or Llama 3's 38–43% is not the same kind of
+number, and the paper does not state which attention cost its numerator uses.
+
+The rule that survives: **an MFU is comparable only against another MFU whose
+numerator you can reconstruct.** If you cannot reconstruct it, quote it as
+"reported" and say what the model was.
+
 ## Worked example — 7B on 8× H100
 
 ```

@@ -127,6 +127,16 @@ for them proactively:
 | per-rank tokens processed per step | data skew (variable-length sequences) |
 | SM clock and GPU temperature per rank | thermal throttling |
 | per-rank host CPU time in the dataloader | a slow disk or a starved worker |
+| per-rank forward/backward duration from CUDA events, always on | one host slower at *identical* work — hardware, not data |
+
+The last row is a different instrument from the others: not a profiler run on
+demand, but **CUDA-event timers left on in production**, streamed off-box and
+aggregated per rank. Timing with CUDA events rather than host-side
+synchronization is what makes this affordable — MegaScale reports negligible
+overhead with it enabled for the whole run (arXiv:2402.15627). What it buys is
+the one view that identifies a hardware straggler unambiguously: a heat map of
+`rank × phase duration`, averaged over steps, where every rank is executing
+the same shapes. An outlier there cannot be data skew.
 
 The inverse signal is the useful one and is often missed: **the straggler
 spends the least time waiting in collectives**. If rank 5 reports 2 ms in
@@ -154,6 +164,51 @@ duration has mean `μ` and the tail is heavy, the expected maximum grows with
 `n` — so a jitter source that is invisible at 8 GPUs is dominant at 8192. This
 is the "serialization" budget in the router's frame, and it is why large runs
 invest in per-rank telemetry that small runs never need.
+
+Measured, at production scale (arXiv:2402.15627): roughly **0.5% of machines**
+ran substantially slower than the rest, the identified hosts taking **~10%
+longer for identical forward computation**; isolating and removing them was
+worth **~0.7% MFU**.
+
+The second finding from the same exercise is the more useful one:
+
+> Before the stragglers were removed, peak MFU varied run to run purely
+> because scheduling put different machines in the job. After, it was
+> consistent.
+
+**A straggler does not only cost throughput — it destroys reproducibility.**
+Two runs of the same configuration differing by a few percent is the signature
+(`training-metrics/references/benchmarking-methodology.md`), and it is why
+"we benchmarked it twice and got different numbers" is a placement diagnosis
+before it is a measurement one.
+
+## Slow degradation: when the straggler is timing drift, not hardware
+
+A distinct failure mode with the same symptom. MFU declines gradually over
+hours while **forward, backward, and optimizer time each stay flat**, and the
+fabric shows no change. The step got longer somewhere that is not compute and
+not bandwidth.
+
+The mechanism: ranks begin to *arrive* at the data-parallel reduce-scatter at
+increasingly different times. Since the collective completes on the last
+arrival, every rank pays the spread — and the spread, not any rank's work,
+is what grew.
+
+MegaScale traced this to **irregular garbage collection** and certain PyTorch
+operations sitting on the critical path, and fixed it by modifying or removing
+those code segments; the decline stopped (arXiv:2402.15627). Neither is an
+error, and neither shows up in a profile of a single rank — the cost only
+exists in the *difference* between ranks.
+
+The generalizable rule: **anything that runs on the critical path at an
+interval decided per-process is a distributed performance bug**, even when it
+is cheap. GC, lazy allocator growth, log flushing, and metric uploads all
+qualify. Either take them off the critical path, or make them fire at the same
+step on every rank so the cost is shared rather than serialized.
+
+Diagnosis is in `training-metrics/references/throughput-and-scaling-efficiency.md`
+under slow MFU decay; the discriminating measurement is per-rank *arrival
+time* at a chosen collective, not per-rank step time.
 
 ## Checkpoint interval: Young/Daly
 
@@ -206,6 +261,15 @@ Two readings that people find counterintuitive:
   `f(T_opt) = sqrt(2C/M)`, so halving checkpoint cost reduces total overhead
   by 1/√2 ≈ 29%. Asynchronous and sharded checkpoint writes pay for
   themselves quickly at scale.
+
+Which is why the first question about checkpointing is not "how often" but
+"how expensive". `C` is the only input you control — `M` is given to you by
+the hardware. Staging the write to pinned host memory and pushing to storage
+asynchronously takes `C` from a filesystem write to a PCIe copy; at
+`M = 3 h`, `C = 120 s → 5 s` moves total overhead from **15% to 3%**.
+Mechanism, plus the matching fix for the restart side (one reader per DP group
+broadcasting to the rest), is in
+`references/fault-tolerance-and-node-diagnostics.md`.
 
 For calibration on `M`: Llama 3's 405B run recorded 466 interruptions over 54
 days on up to 16K H100s — 419 unexpected, ~78% of those confirmed hardware,

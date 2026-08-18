@@ -74,6 +74,25 @@ Read `references/why-scaling-is-hard.md` for how these four budgets interact
 as `n` grows, and why the strong-scaling ceiling is set by the ratio of a
 model's compute to its communication, not by any single component.
 
+### The frame prices a step. Past a few hundred GPUs, price the run too
+
+All four budgets describe one step. They are silent on how many steps ran,
+which stops being a detail once `MTBF_job ≈ MTBF_1/n` puts failures hours
+apart rather than months:
+
+```
+goodput = MFU × ETTR
+```
+
+ETTR — effective training time rate — is the fraction of wall-clock spent in
+useful steps rather than in crash detection, diagnosis, restart, and re-doing
+work lost since the last checkpoint. Production runs at 10k+ GPUs report ETTR
+above 90% only because it is engineered for (arXiv:2402.15627). When a
+question is about a large, long run, ask for both numbers: a change that adds
+MFU and subtracts availability is a loss.
+`communication-backends/references/fault-tolerance-and-node-diagnostics.md`
+owns this surface.
+
 ## Routing table
 
 | The question is about | Load skill |
@@ -104,6 +123,8 @@ The most common entries:
 | loss spiked at step 40k and never recovered | — | training-metrics |
 | loss differs after changing TP degree | correctness | training-metrics (batch invariant) |
 | step time p99 ≫ p50 | serialization | communication-backends |
+| MFU decayed over days, per-phase compute flat | serialization | training-metrics |
+| the run keeps dying and restarting | availability | communication-backends |
 | `reserved memory >> allocated memory` | capacity | memory-offloading |
 | works on 1 node, hangs on 2 | serialization | communication-backends |
 

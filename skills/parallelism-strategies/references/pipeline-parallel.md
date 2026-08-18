@@ -36,6 +36,39 @@ Two readings:
    forces `d` down. PP and DP compete for the same budget. This is the actual
    reason large runs cap `p` in the 8–16 range rather than pushing further.
 
+### The third lever on `m`: raise `B` itself
+
+The constraint above is `B = b·m·d` at *fixed* `B`. But `B` is a
+hyperparameter, not a physical limit — it is fixed only because convergence at
+a larger batch is not free. That makes the optimizer a pipeline-efficiency
+knob:
+
+```
+larger B at fixed d, b   →   larger m   →   smaller bubble (p−1)/(m+p−1)
+```
+
+MegaScale took this route explicitly, using LAMB (arXiv:1904.00962) to scale
+the batch by 4× without accuracy loss in their setting, and reports **87.5% of
+the pipeline bubble removed** under an interleaved schedule as a result
+(arXiv:2402.15627). Their ablation prices the whole move at +3.0 MFU points.
+
+This is worth internalizing as a pattern, not just a trick: **an algorithmic
+choice bought a systems property.** The bubble is usually treated as fixed by
+`p` and `m`, with `m` fixed by `B` — and one of those "fixed" values is a
+hyperparameter someone chose.
+
+The cost is real and belongs in the decision:
+
+- past the critical batch size, more samples per step stop buying fewer steps
+  (`training-metrics/references/compute-budget-and-scaling-laws.md`), so a
+  throughput win can be a time-to-loss loss
+- large-batch optimizers change the optimization problem; "no accuracy loss at
+  4×" is a result on one model family, not a law
+- larger `B` at fixed `d` raises activation memory through `b` or `m`
+  (`memory-offloading/references/activation-recomputation.md`)
+
+Verify it as a **time-to-target-loss** win, not a tokens/s win.
+
 ## Schedules
 
 ### GPipe — all-forward-then-all-backward
@@ -167,3 +200,5 @@ imbalanced rather than merely bubbling.
 - PTD-P / interleaved schedule — arXiv:2104.04473
 - Zero Bubble Pipeline Parallelism — arXiv:2401.10241
 - Chimera — arXiv:2107.06925
+- LAMB / large-batch optimization — arXiv:1904.00962
+- MegaScale (bubble reduction via larger batch, at 10k+ GPUs) — arXiv:2402.15627

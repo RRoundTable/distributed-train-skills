@@ -115,6 +115,44 @@ parameters immediately, with no preceding compute to hide the gather, and
 `reshard_after_forward=False` on the outermost layers is the standard partial
 fix (they are the first to be needed again).
 
+## Overlap on the other two axes
+
+DP overlap is the familiar case. TP and PP have their own, and they are worth
+knowing because — measured — they are collectively the largest single category
+of optimization at scale.
+
+**Pipeline parallelism.** The warm-up phase issues a receive and a send that
+are conventionally coupled; decoupling them lets each overlap with the
+computation around it. In steady state, a stage's send and its receive are
+independent of the adjacent compute, so both can be issued asynchronously
+rather than fenced against it. The gain is not bandwidth — PP moves very
+little (`parallelism-strategies/references/pipeline-parallel.md`) — it is
+removing `α`-scale stalls from a schedule that repeats `m` times per step.
+
+**Tensor / sequence parallelism.** This is the hard one, because the collective
+sits *between* two dependent GEMMs rather than after an independent gradient.
+The technique is to break the GEMM into chunks and pipeline the chunk
+computation against the all-gather / reduce-scatter of the neighbouring chunk,
+so the collective for chunk `i` overlaps the compute of chunk `i+1`. Chunk size
+is the same trade as bucket size above: large enough to stay out of the latency
+regime, small enough that something remains to hide behind.
+
+**What it is worth.** From MegaScale's ablation (175B, 256 GPUs, batch 256 —
+arXiv:2402.15627), the increments on top of a 47.7% MFU baseline:
+
+| Optimization | Δ MFU |
+|---|---|
+| TP/SP overlap | +2.2 |
+| PP overlap | +2.5 |
+| DP overlap | +1.5 |
+| **overlap subtotal** | **+6.2** |
+| efficient operators (FlashAttention-2, LayerNorm/GeLU fusion) | +1.7 |
+
+Two readings. First, **overlap is worth ~3.6× what kernel work was worth** in
+that run — hiding communication beat making compute faster. Second, the three
+axes are separate engineering efforts with comparable payoffs; a system that
+overlaps DP well and leaves TP fenced has captured a third of what is there.
+
 ## Compute/communication balance
 
 Overlap only helps if there is compute to hide behind. From the router's
