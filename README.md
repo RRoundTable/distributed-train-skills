@@ -1,5 +1,12 @@
 # distributed-train-skills
 
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757)](https://docs.claude.com/en/docs/claude-code/plugins)
+[![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FRRoundTable%2Fdistributed-train-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](.claude-plugin/plugin.json)
+[![skills](https://img.shields.io/badge/skills-6-blue)](#the-six-skills)
+[![trigger evals](https://img.shields.io/badge/trigger%20evals-135%2F135-brightgreen)](#development)
+[![head-to-head](https://img.shields.io/badge/vs%20forge--train-12%2F12-brightgreen)](#development)
+[![license](https://img.shields.io/github/license/RRoundTable/distributed-train-skills)](LICENSE)
+
 A Claude Code plugin that ships **distributed-training knowledge** — theory,
 math, paper insights, and debugging playbooks — as six skills Claude loads on
 demand.
