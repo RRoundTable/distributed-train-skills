@@ -15,7 +15,8 @@ description: |
   collectives / interconnect (use distributed-train:communication-backends),
   SM/HBM/roofline/precision inside one GPU (use distributed-train:gpu-architecture),
   MFU / throughput / loss curves (use distributed-train:training-metrics),
-  OOM / activation checkpointing / offload (use distributed-train:memory-offloading).
+  OOM, memory budgeting, "will this model fit on this GPU", activation
+  checkpointing or offload (use distributed-train:memory-offloading).
   Also do NOT activate for running or inspecting real cluster jobs — submitting
   a training job, GPU quota, job status/QUEUED, reading a failed job's logs,
   building training images, datasets/disks, multi-node launch — that is
