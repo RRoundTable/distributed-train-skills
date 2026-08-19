@@ -166,6 +166,35 @@
           "description": "Warns that using N_total for MFU inflates it (by roughly E/k, here about 18x)"
         }
       ]
+    },
+    {
+      "id": 7,
+      "name": "ring-vs-ulysses-head-ceiling",
+      "prompt": "128k context로 학습하려고 CP를 붙이려는데, ring attention이랑 DeepSpeed-Ulysses 중에 뭘 써야 해? 모델은 KV head가 8개고 지금 TP=8로 돌리고 있어.",
+      "expected_output": "Ring. Ulysses shards attention heads across the CP group, and Megatron TP already shards heads across t, so t·c must not exceed the head count — under GQA the KV head count. With 8 KV heads and t=8 there are no heads left, so c=1 and Ulysses is unusable. Ring attention has no such ceiling. Should also price the ring's cost: causal imbalance needs zigzag/striped sharding, and per-link volume is higher than Ulysses's 4·b·s·h/c.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "picks-ring",
+          "description": "Concludes ring attention, not Ulysses, for this configuration"
+        },
+        {
+          "id": "head-count-ceiling",
+          "description": "States that Ulysses shards attention heads, so its degree is bounded by the head count — and under grouped-query attention it is the KV head count that binds"
+        },
+        {
+          "id": "tp-competes-for-heads",
+          "description": "Recognizes that Megatron TP also splits heads, so TP and Ulysses compete for the same resource (t·c ≤ head count); with 8 KV heads and t=8 nothing is left for Ulysses"
+        },
+        {
+          "id": "ring-has-no-ceiling",
+          "description": "Notes ring attention has no head-count ceiling and can scale c past it"
+        },
+        {
+          "id": "prices-the-ring",
+          "description": "Names at least one real cost of the ring choice — causal load imbalance requiring zigzag/striped sharding, or its higher per-link communication volume versus Ulysses"
+        }
+      ]
     }
   ]
 }

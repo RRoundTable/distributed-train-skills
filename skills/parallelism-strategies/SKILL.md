@@ -5,8 +5,9 @@ description: |
   Activate for: DDP vs FSDP vs DeepSpeed ZeRO and which stage, tensor / pipeline
   / context / expert parallelism, Megatron column-row split, pipeline bubble and
   1F1B / interleaved / zero-bubble schedules, sequence vs context parallelism,
-  ring attention, MoE routing, choosing TP/PP/DP/CP degrees, 3D/4D mesh design,
-  comm-volume comparisons, "70B 모델 어떻게 쪼개", "DDP랑 FSDP 차이".
+  ring attention, DeepSpeed-Ulysses, MoE routing, choosing TP/PP/DP/CP degrees,
+  3D/4D mesh design, comm-volume comparisons,
+  "70B 모델 어떻게 쪼개", "DDP랑 FSDP 차이".
   Do NOT activate for collectives/NCCL/hangs (communication-backends), OOM or
   memory budgeting (memory-offloading), MFU/throughput/loss (training-metrics),
   or single-GPU kernels/roofline/precision (gpu-architecture). Do NOT activate
@@ -40,7 +41,7 @@ several at once:
 | the **batch** | `B` | DP / ZeRO / FSDP | full (DP) or `1/d` (ZeRO) | `1/d` |
 | a **layer's weights** | `h`, ffn | TP (Megatron) | `1/t` | `1/t` inside the block |
 | the **layer stack** | `L` | PP | `1/p` | `1/p` of layers, but ×`p` in flight |
-| the **sequence** | `s` | SP / CP / ring attention | full | `1/c` |
+| the **sequence** | `s` | SP / CP — ring attention or Ulysses | full | `1/c` |
 | the **experts** | MoE | EP | `1/e` of expert weights | routed |
 
 Reading them as "what gets divided by what" is the whole design space. What
@@ -62,6 +63,7 @@ bytes-per-element for the dtype actually on the wire. Derivations in
 | TP (Megatron) | 4 all-reduces per layer per step | `4 · b·s·h` per layer | 2 forward, 2 backward, on activations |
 | PP | point-to-point at each boundary | `2·b·s·h` per boundary | tiny volume, but it *serializes* |
 | CP (ring attention) | `c−1` ring steps of K/V per attention | `2·b·s·h/c` per step × `(c−1)` | overlappable with attention compute |
+| CP (Ulysses) | 2 all-to-all per attention | `4·b·s·h/c` per layer, per link | `c`× less volume, but `c ≤` head count |
 | EP (MoE) | 2 all-to-all per MoE layer | routed tokens × `h` | volume depends on routing balance |
 
 Three consequences fall straight out of this table, and they are the reason
@@ -156,7 +158,10 @@ The order that converges fastest, because each answer constrains the next:
 3. **Model still too big for one node?** Add PP. Choose `p` to be the fewest
    stages that make it fit, because bubble grows with `p`.
 4. **Sequence too long?** Add CP. It is the only axis that shrinks the
-   `O(s²)` attention working set across ranks.
+   `O(s²)` attention working set across ranks. Then pick the family: Ulysses
+   (all-to-all, lower volume, unmodified attention kernel) if `t·c` fits
+   inside the head count and the group fits inside a node; ring attention
+   otherwise. `references/sequence-context-parallel.md` has the comparison.
 5. **MoE?** EP replaces most of what TP would do for the expert weights, but
    introduces all-to-all — see `references/expert-parallel-moe.md`.
 6. **Fill the rest with DP.** `d = n/(t·p·c)`.
@@ -173,7 +178,8 @@ even if it fits.
   without "+50% wire traffic vs ZeRO-2" is half an answer.
 - Say which budget the change addresses (capacity / bandwidth / serialization)
   — the router's frame.
-- Distinguish SP from CP explicitly whenever either appears.
+- Distinguish SP from CP explicitly whenever either appears, and name which
+  CP family (ring or Ulysses) — their ceilings and costs differ.
 - Do not emit `forge` commands, launcher recipes, or cluster-specific env-var
   values.
 
@@ -184,6 +190,6 @@ even if it fits.
 | `references/data-parallel-and-zero.md` | DDP mechanics, the `2Ψ+2Ψ+KΨ` derivation, ZeRO stages 1/2/3, FSDP vs DeepSpeed, the RS∘AG identity, the 1.5× rule |
 | `references/tensor-parallel.md` | Megatron column→row split, the `f`/`f̄` conjugate pair, why 4 all-reduces, attention head splitting, `t ≤` node size |
 | `references/pipeline-parallel.md` | GPipe / 1F1B / interleaved / zero-bubble, bubble derivations, stage balancing, p2p volume, PP + recompute interaction |
-| `references/sequence-context-parallel.md` | Megatron SP vs ring-attention CP, the ring schedule, causal load imbalance, Striped Attention |
+| `references/sequence-context-parallel.md` | Megatron SP vs CP, the ring schedule, causal load imbalance, Striped Attention, DeepSpeed-Ulysses and the ring-vs-Ulysses trade-off, the `t·c ≤` head-count ceiling |
 | `references/expert-parallel-moe.md` | top-k routing, `N_total` vs `N_active`, all-to-all cost, capacity factor and dropping, expert-choice routing, Tutel |
 | `references/composing-nd-parallelism.md` | the ordering derivation, three fully-numeric mesh configurations, degrees-of-freedom counting, published configs |

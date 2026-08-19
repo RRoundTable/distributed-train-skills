@@ -141,6 +141,23 @@ is more topology-sensitive than dense training, and why hierarchical
 all-to-all implementations (aggregate within the node, then exchange between
 nodes) matter so much.
 
+**And it deserves the opposite note too**, because the same structure is
+sometimes exactly what you want. An aggregate message of `M` bytes is split
+`n` ways, so each *link* carries `M/n` — the per-link volume **falls as the
+group grows**, which no all-reduce can offer. Two designs are built on this
+property:
+
+- MoE dispatch/combine, where each token must reach exactly one expert's rank.
+- DeepSpeed-Ulysses (arXiv:2309.14509), which uses two all-to-alls per
+  attention to transpose between a sequence-sharded and a head-sharded layout,
+  giving per-link volume `O(s·h/c)` against Megatron sequence parallelism's
+  `O(s·h)` — see
+  `parallelism-strategies/references/sequence-context-parallel.md`.
+
+The two notes together are the actual guidance: **all-to-all wins on volume
+and loses on topology.** Inside a node it is the cheapest way to redistribute
+data; across an oversubscribed fabric it is the first thing to suspect.
+
 ## Point-to-point
 
 Pipeline parallelism uses `send`/`recv` rather than collectives. Cost is

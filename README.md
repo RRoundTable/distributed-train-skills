@@ -147,7 +147,7 @@ not crowded out.
 ```
 
 Every case runs twice, with and without the skill's content injected, and the
-**gap** is the number that matters. 36 cases / ~150 assertions across the six
+**gap** is the number that matters. 37 cases / ~170 assertions across the six
 skills, written against specific checkable quantities (`(p−1)/(m+p−1)`,
 `s·b·h·(34 + 5as/h)`, the H100 dense ridge point of 295) rather than vague
 ones — a base model already says "communication overhead matters", so an
